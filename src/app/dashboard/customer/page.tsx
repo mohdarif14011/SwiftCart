@@ -35,6 +35,12 @@ import {
   X
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -54,6 +60,7 @@ export default function CustomerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
+  const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -64,13 +71,24 @@ export default function CustomerDashboard() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const filteredProducts = useMemo(() => {
-    const list = products;
-    return list.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchQuery, activeCategory]);
+    let list = [...products];
+    // Filter by search
+    list = list.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Filter by category
+    if (activeCategory !== 'All') {
+      list = list.filter(p => p.category === activeCategory);
+    }
+
+    // Sort
+    if (sortBy === 'low-to-high') {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'high-to-low') {
+      list.sort((a, b) => b.price - a.price);
+    }
+    
+    return list;
+  }, [products, searchQuery, activeCategory, sortBy]);
 
   const favoritesProducts = useMemo(() => {
     return products.filter(p => favorites.includes(p.id));
@@ -252,18 +270,24 @@ export default function CustomerDashboard() {
             {/* Main Product Grid */}
             <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
-                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                  Filters <ChevronDown className="h-3 w-3" />
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                  Sort <ChevronDown className="h-3 w-3" />
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                  Price <ChevronDown className="h-3 w-3" />
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                  Brand <ChevronDown className="h-3 w-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                      Sort <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="rounded-xl">
+                    <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">
+                      Relevance
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">
+                      Price: Low to High
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">
+                      Price: High to Low
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-8">
