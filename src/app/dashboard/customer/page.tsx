@@ -270,12 +270,6 @@ export default function CustomerDashboard() {
           <div className="p-6 space-y-2">
             <h1 className="text-3xl font-black text-slate-900">Delivery Location</h1>
             <p className="text-slate-500 font-medium">Pinpoint your house for precise delivery.</p>
-            {detectedAddress && (
-              <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-top-2">
-                <MapPin className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm font-bold text-slate-700 truncate">{detectedAddress}</span>
-              </div>
-            )}
           </div>
           
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
@@ -508,7 +502,7 @@ export default function CustomerDashboard() {
             </div>
           </header>
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex-1 flex overflow-hidden">
             <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
               {CATEGORIES.map((cat) => {
                 const isActive = activeCategory === cat.name;
