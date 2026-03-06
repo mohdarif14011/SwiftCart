@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,24 +19,22 @@ import {
   Home as HomeIcon,
   LayoutGrid,
   ShoppingBag,
-  Apple,
   Leaf,
+  Apple,
   Milk,
   Croissant,
   Cookie,
   Sparkles,
+  CookingPot,
   Plus,
   Minus,
   Heart,
-  Share2,
   ArrowLeft,
   Star,
   ChevronRight,
-  CookingPot,
-  X,
   Trash2,
   CheckCircle2,
-  ReceiptText
+  LogOut
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -57,6 +56,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/firebase';
 
 const CATEGORIES = [
   { name: 'Vegetables', icon: Leaf },
@@ -77,13 +77,16 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function CustomerDashboard() {
-  const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
+  const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success'>('home');
   const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  
+  const router = useRouter();
+  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -136,6 +139,24 @@ export default function CustomerDashboard() {
     setCurrentView('order-success');
   };
 
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      setUser(null);
+      router.push('/');
+      toast({
+        title: "Signed out",
+        description: "You have been successfully logged out."
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Logout failed",
+        description: error.message
+      });
+    }
+  };
+
   if (!isClient) return null;
 
   return (
@@ -164,9 +185,25 @@ export default function CustomerDashboard() {
                   <Wallet className="h-4 w-4 text-slate-600" />
                   <span className="text-xs font-bold text-slate-700">₹0</span>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
-                  <UserIcon className="h-5 w-5 text-slate-700" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
+                      <UserIcon className="h-5 w-5 text-slate-700" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl w-48">
+                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {user?.name || 'Account'}
+                    </div>
+                    <Separator className="my-1" />
+                    <DropdownMenuItem 
+                      onClick={handleLogout} 
+                      className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" /> Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
