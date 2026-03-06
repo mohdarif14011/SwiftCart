@@ -55,7 +55,6 @@ export default function CustomerDashboard() {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
   const [isClient, setIsClient] = useState(false);
-  const [isHeaderSearching, setIsHeaderSearching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -193,44 +192,16 @@ export default function CustomerDashboard() {
       {/* Categories Split-View */}
       {currentView === 'categories' && (
         <div className="flex flex-col h-screen overflow-hidden">
-          <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50">
-            <div className="flex items-center gap-3 flex-1 overflow-hidden">
-              <button onClick={() => { setCurrentView('home'); setIsHeaderSearching(false); }} className="p-1 flex-shrink-0">
-                <ArrowLeft className="h-6 w-6 text-slate-900" />
-              </button>
-              {isHeaderSearching ? (
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input 
-                    autoFocus
-                    placeholder={`Search in ${activeCategory}...`} 
-                    className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary w-full"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button 
-                    onClick={() => { setSearchQuery(''); setIsHeaderSearching(false); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col overflow-hidden">
-                  <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
-                  <div className="flex items-center text-[10px] text-primary font-bold">
-                    Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                  </div>
-                </div>
-              )}
-            </div>
-            {!isHeaderSearching && (
-              <div className="flex items-center gap-4 ml-4">
-                <button onClick={() => setIsHeaderSearching(true)} className="p-1">
-                  <Search className="h-6 w-6 text-slate-900" />
-                </button>
+          <header className="bg-white px-4 py-3 border-b flex items-center sticky top-0 z-50">
+            <button onClick={() => setCurrentView('home')} className="p-1 mr-3 flex-shrink-0">
+              <ArrowLeft className="h-6 w-6 text-slate-900" />
+            </button>
+            <div className="flex flex-col overflow-hidden">
+              <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
+              <div className="flex items-center text-[10px] text-primary font-bold">
+                Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
               </div>
-            )}
+            </div>
           </header>
 
           <div className="flex flex-1 overflow-hidden">
@@ -320,21 +291,21 @@ export default function CustomerDashboard() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
         <button 
-          onClick={() => { setCurrentView('home'); setIsHeaderSearching(false); }}
+          onClick={() => setCurrentView('home')}
           className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}
         >
           <HomeIcon className="h-6 w-6" />
           <span className="text-[10px] font-bold">Home</span>
         </button>
         <button 
-          onClick={() => { setCurrentView('favorites'); setIsHeaderSearching(false); }}
+          onClick={() => setCurrentView('favorites')}
           className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}
         >
           <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
           <span className="text-[10px] font-bold">Favorites</span>
         </button>
         <button 
-          onClick={() => { setCurrentView('categories'); setIsHeaderSearching(false); }}
+          onClick={() => setCurrentView('categories')}
           className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}
         >
           <LayoutGrid className="h-6 w-6" />
