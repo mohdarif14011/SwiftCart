@@ -167,6 +167,10 @@ export default function CustomerDashboard() {
       toast({ variant: "destructive", title: "Required fields", description: "Please provide your phone number." });
       return;
     }
+    if (!detectedAddress) {
+      toast({ variant: "destructive", title: "Required fields", description: "Please provide your delivery address." });
+      return;
+    }
 
     setSavingProfile(true);
     try {
@@ -330,7 +334,7 @@ export default function CustomerDashboard() {
 
       {/* Onboarding: Details Step */}
       {currentView === 'onboarding-details' && (
-        <div className="flex flex-col h-screen bg-white p-6 space-y-8">
+        <div className="flex flex-col h-screen bg-white p-6 space-y-8 overflow-y-auto">
           <div className="space-y-2">
             <button onClick={() => setCurrentView('onboarding-map')} className="p-1 -ml-1">
               <ArrowLeft className="h-6 w-6 text-slate-900" />
@@ -341,11 +345,15 @@ export default function CustomerDashboard() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Selected Location</label>
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <MapPin className="h-5 w-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-900">{detectedAddress}</span>
-                <div className="ml-auto bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded font-black">FIXED</div>
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input 
+                  placeholder="Street name, House No, Area" 
+                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                  value={detectedAddress}
+                  onChange={(e) => setDetectedAddress(e.target.value)}
+                />
               </div>
             </div>
 
