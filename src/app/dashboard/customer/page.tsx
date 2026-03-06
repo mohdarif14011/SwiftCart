@@ -20,7 +20,6 @@ import {
   Home as HomeIcon,
   Repeat,
   LayoutGrid,
-  Printer,
   ShoppingBag,
   Smartphone,
   Sparkles,
@@ -228,23 +227,18 @@ export default function CustomerDashboard() {
           <LayoutGrid className="h-6 w-6" />
           <span className="text-[10px] font-bold">Categories</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
-          <Printer className="h-6 w-6" />
-          <span className="text-[10px] font-bold">Print</span>
-        </button>
         
-        {/* Float Shopping Cart Button */}
+        {/* Integrated Shopping Cart Menu Button */}
         <Sheet>
           <SheetTrigger asChild>
-            <button className="absolute -top-16 right-4 bg-primary text-white p-4 rounded-full shadow-2xl animate-bounce">
-              <div className="relative">
-                <ShoppingCart className="h-6 w-6" />
-                {cart.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-accent text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-primary">
-                    {cart.reduce((s, i) => s + i.quantity, 0)}
-                  </span>
-                )}
-              </div>
+            <button className="flex flex-col items-center gap-1 text-slate-400 relative">
+              <ShoppingCart className="h-6 w-6" />
+              <span className="text-[10px] font-bold">Cart</span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-accent text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              )}
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
