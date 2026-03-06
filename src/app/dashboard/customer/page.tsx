@@ -32,9 +32,9 @@ import {
   Star,
   ChevronRight,
   CookingPot,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -59,7 +59,7 @@ export default function CustomerDashboard() {
   const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
-  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart'>('home');
   const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
@@ -116,6 +116,7 @@ export default function CustomerDashboard() {
     };
     placeOrder(newOrder);
     toast({ title: "Order Placed", description: "Your groceries are on the way!" });
+    setCurrentView('home');
   };
 
   if (!isClient) return null;
@@ -218,7 +219,7 @@ export default function CustomerDashboard() {
               <div className="flex flex-col overflow-hidden min-w-0">
                 <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
                 <div className="flex items-center text-[10px] text-primary font-bold">
-                  Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  Delivering to : <span className="text-slate-500 ml-1 truncate">Harwara, Dhoomanganj...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
                 </div>
               </div>
             </div>
@@ -303,11 +304,16 @@ export default function CustomerDashboard() {
       {/* Favorites View */}
       {currentView === 'favorites' && (
         <>
-          <header className="bg-white px-4 py-6 border-b">
-            <h2 className="text-3xl font-black text-slate-900">Favorites</h2>
-            <p className="text-sm text-slate-500">Your handpicked groceries</p>
+          <header className="bg-white px-4 py-6 border-b flex items-center gap-4">
+            <button onClick={() => setCurrentView('home')}>
+              <ArrowLeft className="h-6 w-6 text-slate-900" />
+            </button>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900">Favorites</h2>
+              <p className="text-xs text-slate-500 font-bold">Your handpicked groceries</p>
+            </div>
           </header>
-          <main className="flex-1 p-4">
+          <main className="flex-1 p-4 overflow-y-auto no-scrollbar">
             {favoritesProducts.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
                 <Heart className="h-16 w-16 mb-4 opacity-10" />
@@ -323,6 +329,140 @@ export default function CustomerDashboard() {
             )}
           </main>
         </>
+      )}
+
+      {/* Full Page Cart View */}
+      {currentView === 'cart' && (
+        <div className="flex flex-col h-screen overflow-hidden">
+          <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
+            <button onClick={() => setCurrentView('home')}>
+              <ArrowLeft className="h-6 w-6 text-slate-900" />
+            </button>
+            <div className="flex-1">
+              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                My Basket
+              </h2>
+              <p className="text-xs text-slate-500 font-bold">{cart.length} items</p>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-y-auto p-4 no-scrollbar bg-slate-50">
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 text-slate-400">
+                <ShoppingBag className="h-20 w-20 mb-6 opacity-20" />
+                <p className="text-lg font-black text-slate-600">Your basket is empty</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-6 rounded-xl font-black border-slate-300"
+                  onClick={() => setCurrentView('home')}
+                >
+                  Start Shopping
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-white rounded-3xl p-2 space-y-2 border border-slate-100 shadow-sm">
+                  {cart.map((item) => (
+                    <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
+                      <div className="h-20 w-20 relative rounded-2xl overflow-hidden bg-white border border-slate-100 p-2 flex-shrink-0">
+                        <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
+                        <div className="pr-8 relative">
+                          <h4 className="font-black text-sm text-slate-900 line-clamp-1">{item.name}</h4>
+                          <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
+                          <button 
+                            className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors"
+                            onClick={() => removeFromCart(item.productId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden h-8 shadow-sm">
+                            <button 
+                              className="px-3 hover:bg-slate-50 text-slate-600"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="px-1 text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                            <button 
+                              className="px-3 hover:bg-slate-50 text-slate-600"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Delivery Address Placeholder */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-slate-100 rounded-xl">
+                      <MapPin className="h-5 w-5 text-slate-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">Harwara, Dhoomanganj, Prayagraj, 211011</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-green-600 font-black text-xs hover:bg-green-50">CHANGE</Button>
+                  </div>
+                </div>
+
+                {/* Bill Summary */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mb-20">
+                  <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Item Total</span>
+                      <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Delivery Fee</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-300 line-through">₹25</span>
+                        <span className="text-green-600 font-bold">FREE</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Handling Charge</span>
+                      <span className="font-bold">₹2</span>
+                    </div>
+                    <Separator className="bg-slate-100" />
+                    <div className="flex justify-between text-xl font-black">
+                      <span className="text-slate-900">Grand Total</span>
+                      <span className="text-slate-900">₹{(cartTotal + 2).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {cart.length > 0 && (
+            <div className="bg-white border-t p-4 pb-12 flex-shrink-0 z-50 shadow-2xl">
+              <Button 
+                className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700 flex items-center justify-between px-6"
+                onClick={handleCheckout}
+              >
+                <div className="text-left">
+                  <p className="text-[10px] opacity-80 uppercase tracking-widest leading-none">Total</p>
+                  <p className="text-xl leading-none mt-1">₹{(cartTotal + 2).toFixed(2)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Place Order</span>
+                  <ChevronRight className="h-5 w-5" />
+                </div>
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Bottom Navigation */}
@@ -349,99 +489,20 @@ export default function CustomerDashboard() {
           <span className="text-[10px] font-bold">Categories</span>
         </button>
         
-        <Sheet>
-          <SheetTrigger asChild>
-            <button className="flex flex-col items-center gap-1 text-slate-400 relative">
-              <ShoppingCart className="h-6 w-6" />
-              <span className="text-[10px] font-bold">Cart</span>
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
-                  {cart.reduce((s, i) => s + i.quantity, 0)}
-                </span>
-              )}
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] rounded-t-[2.5rem] p-0">
-            <div className="p-6 h-full flex flex-col">
-              <SheetHeader className="mb-6">
-                <SheetTitle className="text-2xl font-black flex items-center gap-2">
-                  <ShoppingCart className="h-6 w-6 text-green-600" />
-                  My Basket
-                </SheetTitle>
-              </SheetHeader>
-              <div className="flex-1 overflow-y-auto space-y-4">
-                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                    <Package className="h-16 w-16 mb-4 opacity-20" />
-                    <p className="font-bold">Your basket is empty</p>
-                  </div>
-                ) : (
-                  cart.map((item) => (
-                    <div key={item.productId} className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div className="h-20 w-20 relative rounded-xl overflow-hidden bg-white border border-slate-100 p-2">
-                        <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                          <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
-                          <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden h-8">
-                            <button 
-                              className="px-2 hover:bg-slate-50"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="px-3 text-xs font-black">{item.quantity}</span>
-                            <button 
-                              className="px-2 hover:bg-slate-50"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <button 
-                            className="text-[10px] font-bold text-destructive"
-                            onClick={() => removeFromCart(item.productId)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {cart.length > 0 && (
-                <div className="mt-6 space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Subtotal</span>
-                      <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Delivery Fee</span>
-                      <span className="text-green-600 font-bold">FREE</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-lg font-black">
-                      <span>Total</span>
-                      <span className="text-green-600">₹{cartTotal.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700" onClick={handleCheckout}>
-                    Place Order
-                  </Button>
-                </div>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <button 
+          onClick={() => setCurrentView('cart')}
+          className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}
+        >
+          <div className="relative">
+            <ShoppingCart className="h-6 w-6" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                {cart.reduce((s, i) => s + i.quantity, 0)}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-bold">Cart</span>
+        </button>
       </nav>
     </div>
   );
