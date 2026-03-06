@@ -192,15 +192,28 @@ export default function CustomerDashboard() {
       {/* Categories Split-View */}
       {currentView === 'categories' && (
         <div className="flex flex-col h-screen overflow-hidden">
-          <header className="bg-white px-4 py-3 border-b flex items-center sticky top-0 z-50">
-            <button onClick={() => setCurrentView('home')} className="p-1 mr-3 flex-shrink-0">
-              <ArrowLeft className="h-6 w-6 text-slate-900" />
-            </button>
-            <div className="flex flex-col overflow-hidden">
-              <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
-              <div className="flex items-center text-[10px] text-primary font-bold">
-                Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+          <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50 gap-4">
+            <div className="flex items-center overflow-hidden">
+              <button onClick={() => setCurrentView('home')} className="p-1 mr-3 flex-shrink-0">
+                <ArrowLeft className="h-6 w-6 text-slate-900" />
+              </button>
+              <div className="flex flex-col overflow-hidden min-w-0">
+                <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
+                <div className="flex items-center text-[10px] text-primary font-bold">
+                  Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                </div>
               </div>
+            </div>
+            
+            <div className="relative flex-1 max-w-[200px] sm:max-w-md ml-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input 
+                placeholder='Search' 
+                className="pl-10 pr-10 h-10 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             </div>
           </header>
 
