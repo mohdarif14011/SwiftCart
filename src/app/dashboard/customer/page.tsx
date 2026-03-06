@@ -37,7 +37,8 @@ import {
   LogOut,
   Navigation,
   Loader2,
-  Phone
+  Phone,
+  Building2
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -95,8 +96,9 @@ export default function CustomerDashboard() {
   
   // Onboarding state
   const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [detectedAddress, setDetectedAddress] = useState<string>('');
   const [locating, setLocating] = useState(false);
-  const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '' });
+  const [onboardingForm, setOnboardingForm] = useState({ phone: '', nearby: '' });
   const [savingProfile, setSavingProfile] = useState(false);
 
   const router = useRouter();
@@ -128,27 +130,31 @@ export default function CustomerDashboard() {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
+          // Mock address for demo purposes
+          setDetectedAddress("Harwara, Dhoomanganj, Prayagraj");
           setLocating(false);
           toast({ title: "Location detected", description: "Your current position has been pinpointed." });
         },
         (error) => {
           console.error(error);
           setLocating(false);
-          // Fallback to coordinates from user screenshot
+          // Fallback to coordinates
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
+          setDetectedAddress("Default Location - Prayagraj Area");
           toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default location." });
         }
       );
     } else {
       setLocating(false);
       setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
+      setDetectedAddress("Default Location - Prayagraj Area");
     }
   };
 
   const handleOnboardingComplete = async () => {
     if (!user?.id) return;
-    if (!onboardingForm.phone || !onboardingForm.address) {
-      toast({ variant: "destructive", title: "Required fields", description: "Please provide your phone number and full address." });
+    if (!onboardingForm.phone) {
+      toast({ variant: "destructive", title: "Required fields", description: "Please provide your phone number." });
       return;
     }
 
@@ -164,7 +170,8 @@ export default function CustomerDashboard() {
         lastName,
         email: user.email,
         phone: onboardingForm.phone,
-        address: onboardingForm.address,
+        address: detectedAddress,
+        nearby: onboardingForm.nearby,
         location: gpsLocation,
         createdAt: new Date().toISOString()
       });
@@ -252,6 +259,12 @@ export default function CustomerDashboard() {
           <div className="p-6 space-y-2">
             <h1 className="text-3xl font-black text-slate-900">Delivery Location</h1>
             <p className="text-slate-500 font-medium">Pinpoint your house for precise delivery.</p>
+            {detectedAddress && (
+              <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-xl border border-primary/20 animate-in fade-in slide-in-from-top-2">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-bold text-slate-700 truncate">{detectedAddress}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
@@ -269,9 +282,6 @@ export default function CustomerDashboard() {
               <div className="relative">
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
                   <Navigation className="h-6 w-6 text-white" />
-                </div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold whitespace-nowrap shadow-xl">
-                  {gpsLocation ? `${gpsLocation.lat.toFixed(4)}, ${gpsLocation.lng.toFixed(4)}` : 'Detecting...'}
                 </div>
               </div>
             </div>
@@ -311,6 +321,15 @@ export default function CustomerDashboard() {
 
           <div className="space-y-6">
             <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Selected Location</label>
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <MapPin className="h-5 w-5 text-slate-400" />
+                <span className="text-sm font-bold text-slate-900">{detectedAddress}</span>
+                <div className="ml-auto bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded font-black">FIXED</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -324,14 +343,14 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">House / Flat / Area</label>
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Optional)</label>
               <div className="relative">
-                <MapPin className="absolute left-4 top-5 h-5 w-5 text-slate-400" />
-                <textarea 
-                  placeholder="Street name, landmark, house number..." 
-                  className="w-full pl-12 pr-4 py-4 min-h-[120px] bg-slate-50 border-none rounded-2xl text-lg font-bold focus:ring-2 focus:ring-primary outline-none"
-                  value={onboardingForm.address}
-                  onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input 
+                  placeholder="e.g. Near Metro Station, Opp. Park" 
+                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                  value={onboardingForm.nearby}
+                  onChange={(e) => setOnboardingForm({...onboardingForm, nearby: e.target.value})}
                 />
               </div>
             </div>
@@ -365,7 +384,7 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
                 <button className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]">
-                  {profile?.address || 'Harwara, Dhoomanganj...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
+                  {profile?.address || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
                 </button>
               </div>
               <div className="flex items-center gap-3">
