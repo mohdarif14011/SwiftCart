@@ -33,7 +33,9 @@ import {
   ChevronRight,
   CookingPot,
   X,
-  Trash2
+  Trash2,
+  CheckCircle2,
+  ReceiptText
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -41,6 +43,16 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -56,12 +68,13 @@ const CATEGORIES = [
 ];
 
 export default function CustomerDashboard() {
-  const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
+  const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
-  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success'>('home');
   const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,21 +85,15 @@ export default function CustomerDashboard() {
 
   const filteredProducts = useMemo(() => {
     let list = [...products];
-    // Filter by search
     list = list.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    // Filter by category
     if (activeCategory !== 'All') {
       list = list.filter(p => p.category === activeCategory);
     }
-
-    // Sort
     if (sortBy === 'low-to-high') {
       list.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'high-to-low') {
       list.sort((a, b) => b.price - a.price);
     }
-    
     return list;
   }, [products, searchQuery, activeCategory, sortBy]);
 
@@ -103,20 +110,21 @@ export default function CustomerDashboard() {
     return groups;
   }, [products]);
 
-  const handleCheckout = () => {
+  const latestOrder = orders[0];
+
+  const handlePlaceOrder = () => {
     if (cart.length === 0) return;
     const newOrder = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
       userId: user?.id || 'anon',
       items: [...cart],
-      total: cartTotal,
+      total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
       address: 'Harwara, Dhoomanganj, Prayagraj',
     };
     placeOrder(newOrder);
-    toast({ title: "Order Placed", description: "Your groceries are on the way!" });
-    setCurrentView('home');
+    setCurrentView('order-success');
   };
 
   if (!isClient) return null;
@@ -208,7 +216,7 @@ export default function CustomerDashboard() {
         </>
       )}
 
-      {/* Categories Split-View */}
+      {/* Categories View */}
       {currentView === 'categories' && (
         <div className="flex flex-col h-screen overflow-hidden">
           <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50 gap-4">
@@ -223,7 +231,6 @@ export default function CustomerDashboard() {
                 </div>
               </div>
             </div>
-            
             <div className="relative flex-1 max-w-[200px] sm:max-w-md ml-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input 
@@ -232,12 +239,10 @@ export default function CustomerDashboard() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             </div>
           </header>
 
           <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar Navigation */}
             <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
               {CATEGORIES.map((cat) => {
                 const isActive = activeCategory === cat.name;
@@ -267,8 +272,6 @@ export default function CustomerDashboard() {
                 )
               })}
             </aside>
-
-            {/* Main Product Grid */}
             <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
                 <DropdownMenu>
@@ -278,19 +281,12 @@ export default function CustomerDashboard() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="rounded-xl">
-                    <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">
-                      Relevance
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">
-                      Price: Low to High
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">
-                      Price: High to Low
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">Relevance</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">Price: Low to High</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">Price: High to Low</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-
               <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                 {filteredProducts.map(product => (
                   <ProductCard key={product.id} product={product} layout="grid" />
@@ -331,7 +327,7 @@ export default function CustomerDashboard() {
         </>
       )}
 
-      {/* Full Page Cart View */}
+      {/* Cart View */}
       {currentView === 'cart' && (
         <div className="flex flex-col h-screen overflow-hidden">
           <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
@@ -339,9 +335,7 @@ export default function CustomerDashboard() {
               <ArrowLeft className="h-6 w-6 text-slate-900" />
             </button>
             <div className="flex-1">
-              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-                My Basket
-              </h2>
+              <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
               <p className="text-xs text-slate-500 font-bold">{cart.length} items</p>
             </div>
           </header>
@@ -351,17 +345,11 @@ export default function CustomerDashboard() {
               <div className="flex flex-col items-center justify-center py-32 text-slate-400">
                 <ShoppingBag className="h-20 w-20 mb-6 opacity-20" />
                 <p className="text-lg font-black text-slate-600">Your basket is empty</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-6 rounded-xl font-black border-slate-300"
-                  onClick={() => setCurrentView('home')}
-                >
-                  Start Shopping
-                </Button>
+                <Button variant="outline" className="mt-6 rounded-xl font-black" onClick={() => setCurrentView('home')}>Start Shopping</Button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-white rounded-3xl p-2 space-y-2 border border-slate-100 shadow-sm">
+                <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
                   {cart.map((item) => (
                     <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
                       <div className="h-20 w-20 relative rounded-2xl overflow-hidden bg-white border border-slate-100 p-2 flex-shrink-0">
@@ -371,26 +359,17 @@ export default function CustomerDashboard() {
                         <div className="pr-8 relative">
                           <h4 className="font-black text-sm text-slate-900 line-clamp-1">{item.name}</h4>
                           <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
-                          <button 
-                            className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors"
-                            onClick={() => removeFromCart(item.productId)}
-                          >
+                          <button className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors" onClick={() => removeFromCart(item.productId)}>
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden h-8 shadow-sm">
-                            <button 
-                              className="px-3 hover:bg-slate-50 text-slate-600"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                            >
+                            <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
                               <Minus className="h-3 w-3" />
                             </button>
                             <span className="px-1 text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                            <button 
-                              className="px-3 hover:bg-slate-50 text-slate-600"
-                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                            >
+                            <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}>
                               <Plus className="h-3 w-3" />
                             </button>
                           </div>
@@ -401,21 +380,27 @@ export default function CustomerDashboard() {
                   ))}
                 </div>
 
-                {/* Delivery Address Placeholder */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-slate-100 rounded-xl">
-                      <MapPin className="h-5 w-5 text-slate-600" />
-                    </div>
+                    <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
                     <div className="flex-1">
                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
                       <p className="text-sm font-bold text-slate-900 mt-1">Harwara, Dhoomanganj, Prayagraj, 211011</p>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-green-600 font-black text-xs hover:bg-green-50">CHANGE</Button>
                   </div>
                 </div>
 
-                {/* Bill Summary */}
+                {/* Payment Method Section */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-slate-100 rounded-xl"><Wallet className="h-5 w-5 text-slate-600" /></div>
+                    <div className="flex-1">
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Method</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">Scan to pay when delivery Agent arrives</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mb-20">
                   <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
                   <div className="space-y-3">
@@ -425,10 +410,7 @@ export default function CustomerDashboard() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-medium">Delivery Fee</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-300 line-through">₹25</span>
-                        <span className="text-green-600 font-bold">FREE</span>
-                      </div>
+                      <span className="text-green-600 font-bold">FREE</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-medium">Handling Charge</span>
@@ -449,7 +431,7 @@ export default function CustomerDashboard() {
             <div className="bg-white border-t p-4 pb-12 flex-shrink-0 z-50 shadow-2xl">
               <Button 
                 className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700 flex items-center justify-between px-6"
-                onClick={handleCheckout}
+                onClick={() => setIsConfirmOpen(true)}
               >
                 <div className="text-left">
                   <p className="text-[10px] opacity-80 uppercase tracking-widest leading-none">Total</p>
@@ -465,45 +447,96 @@ export default function CustomerDashboard() {
         </div>
       )}
 
+      {/* Order Success View */}
+      {currentView === 'order-success' && latestOrder && (
+        <div className="flex flex-col h-screen bg-white">
+          <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
+            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
+              <CheckCircle2 className="h-12 w-12 text-green-600" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black text-slate-900">Order Confirmed!</h1>
+              <p className="text-slate-500 font-medium">Your groceries will reach you in 9 minutes.</p>
+            </div>
+
+            <Card className="w-full max-w-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Order ID</span>
+                <span className="font-black text-slate-900">#{latestOrder.id}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Current Status</span>
+                <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-2">
+                  <Clock className="h-3 w-3" />
+                  {latestOrder.status.replace(/_/g, ' ')}
+                </div>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Delivery Agent</span>
+                <span className="font-black text-slate-900">Assigning...</span>
+              </div>
+            </Card>
+
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Status is managed by your delivery partner</p>
+            
+            <div className="w-full space-y-3 pt-6">
+              <Button 
+                variant="outline" 
+                className="w-full h-12 rounded-xl font-black border-slate-200"
+                onClick={() => setCurrentView('home')}
+              >
+                Back to Home
+              </Button>
+            </div>
+          </main>
+        </div>
+      )}
+
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
-        <button 
-          onClick={() => setCurrentView('home')}
-          className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}
-        >
-          <HomeIcon className="h-6 w-6" />
-          <span className="text-[10px] font-bold">Home</span>
-        </button>
-        <button 
-          onClick={() => setCurrentView('favorites')}
-          className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}
-        >
-          <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
-          <span className="text-[10px] font-bold">Favorites</span>
-        </button>
-        <button 
-          onClick={() => setCurrentView('categories')}
-          className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}
-        >
-          <LayoutGrid className="h-6 w-6" />
-          <span className="text-[10px] font-bold">Categories</span>
-        </button>
-        
-        <button 
-          onClick={() => setCurrentView('cart')}
-          className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}
-        >
-          <div className="relative">
-            <ShoppingCart className="h-6 w-6" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
-                {cart.reduce((s, i) => s + i.quantity, 0)}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold">Cart</span>
-        </button>
-      </nav>
+      {currentView !== 'order-success' && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
+          <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
+            <HomeIcon className="h-6 w-6" />
+            <span className="text-[10px] font-bold">Home</span>
+          </button>
+          <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
+            <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
+            <span className="text-[10px] font-bold">Favorites</span>
+          </button>
+          <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
+            <LayoutGrid className="h-6 w-6" />
+            <span className="text-[10px] font-bold">Categories</span>
+          </button>
+          <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
+            <div className="relative">
+              <ShoppingCart className="h-6 w-6" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-bold">Cart</span>
+          </button>
+        </nav>
+      )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black text-slate-900">Confirm Your Order?</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium text-slate-500">
+              Are you sure you want to place this order? You will scan to pay ₹{(cartTotal + 2).toFixed(2)} once our delivery partner arrives.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2 mt-4">
+            <AlertDialogCancel className="flex-1 rounded-xl font-bold mt-0">No, Wait</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 rounded-xl font-bold bg-green-600 hover:bg-green-700" onClick={handlePlaceOrder}>Yes, Place Order</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -518,82 +551,38 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
       "flex flex-col transition-all group",
       layout === 'horizontal' ? 'min-w-[140px] max-w-[140px]' : 'w-full'
     )}>
-      {/* Image Container */}
       <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-3 mb-3 border border-slate-100">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
-        />
-        <button 
-          onClick={() => toggleFavorite(product.id)}
-          className={cn(
-            "absolute top-2 right-2 transition-colors",
-            isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400'
-          )}
-        >
+        <img src={product.imageUrl} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
+        <button onClick={() => toggleFavorite(product.id)} className={cn("absolute top-2 right-2 transition-colors", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}>
           <Heart className={cn("h-5 w-5", isFavorite && 'fill-current')} />
         </button>
-        
-        {/* ADD Button */}
         {!cartItem ? (
-          <button 
-            onClick={() => addToCart(product)}
-            className="absolute bottom-2 right-2 bg-white text-green-600 font-black text-xs px-4 py-1.5 rounded-lg shadow-md border border-slate-100 hover:bg-green-600 hover:text-white transition-all"
-          >
-            ADD
-          </button>
+          <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 bg-white text-green-600 font-black text-xs px-4 py-1.5 rounded-lg shadow-md border border-slate-100 hover:bg-green-600 hover:text-white transition-all">ADD</button>
         ) : (
           <div className="absolute bottom-2 right-2 bg-green-600 text-white flex items-center rounded-lg shadow-md overflow-hidden">
-            <button 
-              className="px-2 py-1 hover:bg-green-700 transition-colors"
-              onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
-            >
-              <Minus className="h-3 w-3" />
-            </button>
+            <button className="px-2 py-1 hover:bg-green-700 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}><Minus className="h-3 w-3" /></button>
             <span className="px-2 text-xs font-black">{cartItem.quantity}</span>
-            <button 
-              className="px-2 py-1 hover:bg-green-700 transition-colors"
-              onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
-            >
-              <Plus className="h-3 w-3" />
-            </button>
+            <button className="px-2 py-1 hover:bg-green-700 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}><Plus className="h-3 w-3" /></button>
           </div>
         )}
       </div>
 
-      {/* Product Details */}
       <div className="flex flex-col px-1 gap-1">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 border border-green-600 flex items-center justify-center rounded-[2px]">
-            <div className="w-1.5 h-1.5 bg-green-600 rounded-full" />
-          </div>
+          <div className="w-3 h-3 border border-green-600 flex items-center justify-center rounded-[2px]"><div className="w-1.5 h-1.5 bg-green-600 rounded-full" /></div>
           <span className="text-[10px] text-slate-500 font-bold">500 g</span>
         </div>
-
-        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8">
-          {product.name}
-        </h4>
-
+        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8">{product.name}</h4>
         <div className="flex items-center gap-1">
-          <div className="flex items-center">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />
-            ))}
-          </div>
+          <div className="flex items-center">{[1, 2, 3, 4, 5].map((s) => (<Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />))}</div>
           <span className="text-[8px] text-slate-400 font-bold">(2,340)</span>
         </div>
-
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-          <Clock className="h-3 w-3 text-green-600" /> 12 MINS
-        </div>
-
+        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><Clock className="h-3 w-3 text-green-600" /> 12 MINS</div>
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-sm font-black text-slate-900">₹{product.price}</span>
           <span className="text-[10px] text-slate-400 line-through">₹{Math.round(product.price * 1.2)}</span>
           <span className="text-[10px] font-black text-green-600 ml-auto">22% OFF</span>
         </div>
-        <div className="text-[9px] text-slate-400 font-medium">₹{(product.price / 0.5).toFixed(1)}/kg</div>
       </div>
     </div>
   );
