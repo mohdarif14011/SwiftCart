@@ -1,0 +1,246 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * SwiftCart Security Rules - Prototyping Phase
+     * 
+     * Core Philosophy:
+     * This ruleset enforces a strict user-ownership model while leveraging Role-Based Access Control (RBAC) 
+     * for privileged operations. The system distinguishes between Customers, Delivery Agents, and Admins.
+     * 
+     * Data Structure:
+     * - Customer-specific data (addresses, carts, orders, lists) is nested under /customers/{customerId}.
+     * - Public catalog data (products, categories) exists at the root level.
+     * - Privileged roles are verified via "Existence over Content" in /roles_admin and /roles_delivery_agent.
+     * 
+     * Key Security Decisions:
+     * 1. Denormalization for Authorization: Essential IDs (like customerId) are enforced on documents
+     *    to allow rules to resolve access without performing additional cross-collection lookups (get() calls).
+     * 2. Administrative Override: Users with the Admin role (verified via /roles_admin) have broad 
+     *    read/write access to most collections to facilitate platform management.
+     * 3. Delivery Agent Access: Agents are restricted to their own profiles and the specific Orders 
+     *    or DeliveryTracks where they are the assigned agent.
+     * 4. Flexible Schema: Rules strictly validate identity and relational integrity (IDs) but do not
+     *    enforce specific data types or non-security fields to allow for rapid UI/UX iteration.
+     */
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    function isDeliveryAgent() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_delivery_agent/$(request.auth.uid));
+    }
+
+    // Used for update/delete to ensure the document exists and the user owns it
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // Checks if the user is the customer linked inside the document data
+    function isLinkedCustomer(data) {
+      return data.customerId == request.auth.uid;
+    }
+
+    // Checks if the user is the agent linked inside the document data
+    function isLinkedAgent(data) {
+      return data.deliveryAgentId == request.auth.uid;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for Customer profiles. Allows users to manage their own profile and Admins to manage all.
+     * @path /customers/{customerId}
+     * @allow Authenticated user (create/get/list/update) if customerId matches UID.
+     * @deny Create if the document ID does not match the auth UID.
+     * @principle Path-based ownership and relational integrity.
+     */
+    match /customers/{customerId} {
+      allow get, list: if isOwner(customerId) || isAdmin();
+      allow create: if isOwner(customerId) && request.resource.data.id == customerId;
+      allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin();
+
+      /**
+       * @description Management of customer addresses.
+       * @path /customers/{customerId}/addresses/{addressId}
+       * @allow Owner of the customer path or Admin.
+       * @deny Access to other users' address books.
+       * @principle Hierarchical ownership and denormalized link validation.
+       */
+      match /addresses/{addressId} {
+        allow get, list: if isOwner(customerId) || isAdmin();
+        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+        allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if isExistingOwner(customerId) || isAdmin();
+      }
+
+      /**
+       * @description Management of personal shopping lists.
+       * @path /customers/{customerId}/shoppingLists/{listId}
+       * @allow Owner or Admin.
+       * @deny Listing or reading lists belonging to other users.
+       * @principle Path-based ownership.
+       */
+      match /shoppingLists/{listId} {
+        allow get, list: if isOwner(customerId) || isAdmin();
+        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+        allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if isExistingOwner(customerId) || isAdmin();
+      }
+
+      /**
+       * @description Management of the active shopping cart.
+       * @path /customers/{customerId}/carts/{cartId}
+       * @allow Owner or Admin.
+       * @deny Unsigned users or non-owner customers.
+       * @principle Path-based ownership.
+       */
+      match /carts/{cartId} {
+        allow get, list: if isOwner(customerId) || isAdmin();
+        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+        allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if isExistingOwner(customerId) || isAdmin();
+
+        /**
+         * @description Items within a cart. Relies on denormalized customerId.
+         * @path /customers/{customerId}/carts/{cartId}/items/{cartItemId}
+         * @allow Owner or Admin.
+         * @deny Mismatched customerId in data payload.
+         * @principle Denormalization for Authorization.
+         */
+        match /items/{cartItemId} {
+          allow get, list: if isOwner(customerId) || isAdmin();
+          allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+          allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+          allow delete: if isExistingOwner(customerId) || isAdmin();
+        }
+      }
+
+      /**
+       * @description Order tracking and history.
+       * @path /customers/{customerId}/orders/{orderId}
+       * @allow Customer owner, assigned Delivery Agent, or Admin.
+       * @deny Agents not assigned to this specific order.
+       * @principle Resource-specific roles via denormalized fields.
+       */
+      match /orders/{orderId} {
+        allow get: if isOwner(customerId) || isAdmin() || isLinkedAgent(resource.data);
+        allow list: if isOwner(customerId) || isAdmin() || (isDeliveryAgent() && isLinkedAgent(resource.data));
+        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+        allow update: if isAdmin() || (isDeliveryAgent() && isLinkedAgent(resource.data));
+        allow delete: if isAdmin();
+
+        /**
+         * @description Items within a confirmed order.
+         * @path /customers/{customerId}/orders/{orderId}/items/{orderItemId}
+         * @allow Customer owner, assigned Agent, or Admin.
+         * @deny Modification after order is placed (except for Admins).
+         * @principle Inherited access via denormalized ownership.
+         */
+        match /items/{orderItemId} {
+          allow get, list: if isOwner(customerId) || isAdmin() || isLinkedAgent(get(/databases/$(database)/documents/customers/$(customerId)/orders/$(orderId)).data);
+          allow create, update, delete: if isAdmin();
+        }
+      }
+    }
+
+    /**
+     * @description Delivery Agent profiles. Includes live location and status.
+     * @path /deliveryAgents/{deliveryAgentId}
+     * @allow Agents to update their own data; Admins to manage all.
+     * @deny Unauthenticated updates.
+     * @principle Verified Identity and Role-based writes.
+     */
+    match /deliveryAgents/{deliveryAgentId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (isOwner(deliveryAgentId) && isDeliveryAgent());
+      allow update: if (isExistingOwner(deliveryAgentId) || isAdmin()) && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Admin profiles.
+     * @path /admins/{adminId}
+     * @allow Admins only.
+     * @deny Any non-admin access.
+     * @principle Strict Role-Based Access Control.
+     */
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    /**
+     * @description Role mapping for Admins. Existence of document grants role.
+     * @path /roles_admin/{adminId}
+     * @allow Managed by existing Admins only.
+     * @principle Existence over Content (DBAC).
+     */
+    match /roles_admin/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    /**
+     * @description Role mapping for Delivery Agents.
+     * @path /roles_delivery_agent/{deliveryAgentId}
+     * @allow Managed by Admins.
+     * @principle Existence over Content (DBAC).
+     */
+    match /roles_delivery_agent/{deliveryAgentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    /**
+     * @description Product catalog categories.
+     * @path /categories/{categoryId}
+     * @allow Public read; Admin write.
+     * @deny Public writes.
+     * @principle Public Read with Admin-Only Writes.
+     */
+    match /categories/{categoryId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Product catalog items.
+     * @path /products/{productId}
+     * @allow Public read; Admin write.
+     * @principle Public Read with Admin-Only Writes.
+     */
+    match /products/{productId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Real-time tracking for active deliveries.
+     * @path /deliveryTracks/{orderId}
+     * @allow Assigned Agent to update location; Customer to read progress.
+     * @deny Unauthorized tracking access.
+     * @principle Structural Segregation for performant tracking.
+     */
+    match /deliveryTracks/{orderId} {
+      allow get: if isSignedIn() && (isLinkedCustomer(resource.data) || isLinkedAgent(resource.data) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isDeliveryAgent() && isLinkedAgent(request.resource.data);
+      allow update: if (resource != null && isLinkedAgent(resource.data)) || isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}
