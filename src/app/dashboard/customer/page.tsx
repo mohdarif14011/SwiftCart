@@ -53,6 +53,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -390,7 +391,6 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
 
-                {/* Payment Method Section */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-slate-100 rounded-xl"><Wallet className="h-5 w-5 text-slate-600" /></div>
