@@ -126,10 +126,11 @@ export default function CustomerDashboard() {
     if (gpsLocation) {
       // Simulate reverse geocoding based on coordinates
       if (gpsLocation.lat === FALLBACK_LAT && gpsLocation.lng === FALLBACK_LNG) {
-        setDetectedAddress("Default Location - Prayagraj Area");
+        setDetectedAddress("Harwara, Dhoomanganj, Prayagraj");
       } else {
-        // Mock a dynamic address string that updates with GPS
-        setDetectedAddress(`Detected: Area near ${gpsLocation.lat.toFixed(4)}°N, ${gpsLocation.lng.toFixed(4)}°E`);
+        // Mock a dynamic address string that updates with GPS to feel like a real address
+        // In a real app, this would be a call to Google Maps Geocoding API
+        setDetectedAddress(`Street ${Math.floor(gpsLocation.lat * 100)}, Area ${Math.floor(gpsLocation.lng * 100)}, Current Location`);
       }
     }
   }, [gpsLocation]);
