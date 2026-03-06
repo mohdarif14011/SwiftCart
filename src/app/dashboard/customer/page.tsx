@@ -384,7 +384,7 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
                 <button className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]">
-                  {profile?.address || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
+                  {profile?.address || detectedAddress || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
                 </button>
               </div>
               <div className="flex items-center gap-3">
@@ -479,8 +479,10 @@ export default function CustomerDashboard() {
               </button>
               <div className="flex flex-col overflow-hidden min-w-0">
                 <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
-                <div className="flex items-center text-[10px] text-primary font-bold">
-                  Delivering to : <span className="text-slate-500 ml-1 truncate">{profile?.address || 'Detecting...'}</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                <div className="flex items-center text-[10px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-tighter">Delivering to</span>
+                  <span className="text-slate-500 ml-1 truncate max-w-[120px]">{profile?.address || detectedAddress || 'Detecting...'}</span> 
+                  <ChevronDown className="h-3 w-3 ml-0.5 text-slate-400 flex-shrink-0" />
                 </div>
               </div>
             </div>
@@ -638,7 +640,7 @@ export default function CustomerDashboard() {
                     <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
                     <div className="flex-1">
                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || 'Detecting...'}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || detectedAddress || 'Detecting...'}</p>
                     </div>
                   </div>
                 </div>
