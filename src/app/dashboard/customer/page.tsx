@@ -29,7 +29,6 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 const CATEGORIES = [
   { name: 'All', icon: ShoppingBag },
@@ -39,12 +38,6 @@ const CATEGORIES = [
   { name: 'Bakery', icon: Croissant },
   { name: 'Snacks', icon: Cookie },
   { name: 'Home Essentials', icon: Sparkles },
-];
-
-const BANNERS = [
-  { id: '1', src: 'https://picsum.photos/seed/freshfarm/400/500', title: 'FRESH FROM FARM' },
-  { id: '2', src: 'https://picsum.photos/seed/morning/400/500', title: 'MORNING ESSENTIALS' },
-  { id: '3', src: 'https://picsum.photos/seed/snacks/400/500', title: 'WEEKEND SNACKS' },
 ];
 
 export default function CustomerDashboard() {
@@ -126,6 +119,7 @@ export default function CustomerDashboard() {
             className="pl-10 pr-10 h-12 bg-white border-slate-200 rounded-xl shadow-sm text-base focus-visible:ring-primary"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            suppressHydrationWarning
           />
           <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
@@ -145,29 +139,6 @@ export default function CustomerDashboard() {
               </div>
               <span className={`text-xs font-bold ${activeCategory === cat.name ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
             </button>
-          ))}
-        </div>
-
-        {/* Promotional Banners */}
-        <div className="flex gap-4 overflow-x-auto px-4 py-6 no-scrollbar">
-          {BANNERS.map((banner) => (
-            <div key={banner.id} className="min-w-[200px] aspect-[4/5] relative rounded-2xl overflow-hidden shadow-md group">
-              <Image 
-                src={banner.src} 
-                alt={banner.title} 
-                fill 
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                data-ai-hint={banner.title}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
-                <span className="text-white font-black text-lg leading-tight uppercase tracking-tighter italic">
-                  {banner.title}
-                </span>
-                <Button size="sm" className="w-fit mt-2 h-7 px-3 text-[10px] font-bold bg-white text-black hover:bg-slate-100 rounded-full">
-                  ORDER NOW
-                </Button>
-              </div>
-            </div>
           ))}
         </div>
 
@@ -231,7 +202,7 @@ export default function CustomerDashboard() {
         
         <Sheet>
           <SheetTrigger asChild>
-            <button className="flex flex-col items-center gap-1 text-slate-400 relative">
+            <button className="flex flex-col items-center gap-1 text-slate-400 relative" suppressHydrationWarning>
               <ShoppingCart className="h-6 w-6" />
               <span className="text-[10px] font-bold">Cart</span>
               {cart.length > 0 && (
@@ -270,11 +241,13 @@ export default function CustomerDashboard() {
                           <Button 
                             variant="outline" size="icon" className="h-8 w-8 rounded-lg"
                             onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                            suppressHydrationWarning
                           >-</Button>
                           <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
                           <Button 
                             variant="outline" size="icon" className="h-8 w-8 rounded-lg"
                             onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                            suppressHydrationWarning
                           >+</Button>
                         </div>
                       </div>
@@ -285,6 +258,7 @@ export default function CustomerDashboard() {
                         <Button 
                           variant="ghost" size="sm" className="text-destructive font-bold h-8 p-0"
                           onClick={() => removeFromCart(item.productId)}
+                          suppressHydrationWarning
                         >Remove</Button>
                       </div>
                     </div>
@@ -298,7 +272,7 @@ export default function CustomerDashboard() {
                     <span>Total</span>
                     <span className="text-primary">${cartTotal.toFixed(2)}</span>
                   </div>
-                  <Button className="w-full bg-slate-900 py-7 text-lg rounded-2xl font-black" onClick={handleCheckout}>
+                  <Button className="w-full bg-slate-900 py-7 text-lg rounded-2xl font-black" onClick={handleCheckout} suppressHydrationWarning>
                     Checkout Now
                   </Button>
                   <p className="text-[10px] text-center text-slate-400 font-bold flex items-center justify-center gap-1">
