@@ -1,0 +1,41 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "fresh-vegetables",
+      "description": "Basket of fresh green vegetables",
+      "imageUrl": "https://picsum.photos/seed/veg/600/400",
+      "imageHint": "fresh vegetables"
+    },
+    {
+      "id": "fruit-assortment",
+      "description": "Assortment of tropical fruits",
+      "imageUrl": "https://picsum.photos/seed/fruit/600/400",
+      "imageHint": "fresh fruits"
+    },
+    {
+      "id": "dairy-products",
+      "description": "Milk, cheese and yogurt",
+      "imageUrl": "https://picsum.photos/seed/dairy/600/400",
+      "imageHint": "dairy milk"
+    },
+    {
+      "id": "bakery-items",
+      "description": "Freshly baked bread and pastries",
+      "imageUrl": "https://picsum.photos/seed/bakery/600/400",
+      "imageHint": "bakery bread"
+    },
+    {
+      "id": "meat-poultry",
+      "description": "Selection of meats",
+      "imageUrl": "https://picsum.photos/seed/meat/600/400",
+      "imageHint": "raw meat"
+    },
+    {
+      "id": "delivery-map",
+      "description": "City map with delivery route",
+      "imageUrl": "https://picsum.photos/seed/map/800/600",
+      "imageHint": "city map"
+    }
+  ]
+}
