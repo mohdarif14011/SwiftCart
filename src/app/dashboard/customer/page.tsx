@@ -120,21 +120,6 @@ export default function CustomerDashboard() {
     }
   }, [isClient, isProfileLoading, profile, user]);
 
-  // Handle address detection whenever GPS location changes
-  useEffect(() => {
-    if (gpsLocation) {
-      // Simulate reverse geocoding based on coordinates
-      const isDefault = Math.abs(gpsLocation.lat - FALLBACK_LAT) < 0.001 && Math.abs(gpsLocation.lng - FALLBACK_LNG) < 0.001;
-      
-      if (isDefault) {
-        setDetectedAddress("Harwara, Dhoomanganj, Prayagraj");
-      } else {
-        // Mock a dynamic address string that updates with GPS
-        setDetectedAddress(`Building ${Math.floor(gpsLocation.lat % 100)}, Block ${Math.floor(gpsLocation.lng % 100)}, Global Tech Park`);
-      }
-    }
-  }, [gpsLocation]);
-
   const handleAutoLocate = () => {
     setLocating(true);
     if ("geolocation" in navigator) {
@@ -415,7 +400,7 @@ export default function CustomerDashboard() {
                   onClick={() => setCurrentView('onboarding-map')}
                   className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]"
                 >
-                  {profile?.address || detectedAddress || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
+                  {profile?.address || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
                 </button>
               </div>
               <div className="flex items-center gap-3">
@@ -515,7 +500,7 @@ export default function CustomerDashboard() {
                   className="flex items-center text-[10px] font-bold"
                 >
                   <span className="text-slate-400 uppercase tracking-tighter">Delivering to</span>
-                  <span className="text-slate-500 ml-1 truncate max-w-[120px]">{profile?.address || detectedAddress || 'Detecting...'}</span> 
+                  <span className="text-slate-500 ml-1 truncate max-w-[120px]">{profile?.address || 'Detecting...'}</span> 
                   <ChevronDown className="h-3 w-3 ml-0.5 text-slate-400 flex-shrink-0" />
                 </button>
               </div>
@@ -674,7 +659,7 @@ export default function CustomerDashboard() {
                     <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
                     <div className="flex-1">
                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || detectedAddress || 'Detecting...'}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || 'Detecting...'}</p>
                     </div>
                   </div>
                 </div>
