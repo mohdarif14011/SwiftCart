@@ -31,7 +31,8 @@ import {
   ArrowLeft,
   Star,
   ChevronRight,
-  CookingPot
+  CookingPot,
+  X
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -49,11 +50,12 @@ const CATEGORIES = [
 ];
 
 export default function CustomerDashboard() {
-  const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder } = useAppStore();
+  const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
   const [isClient, setIsClient] = useState(false);
+  const [isHeaderSearching, setIsHeaderSearching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -192,21 +194,42 @@ export default function CustomerDashboard() {
       {currentView === 'categories' && (
         <div className="flex flex-col h-screen overflow-hidden">
           <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setCurrentView('home')} className="p-1">
+            <div className="flex items-center gap-3 flex-1 overflow-hidden">
+              <button onClick={() => { setCurrentView('home'); setIsHeaderSearching(false); }} className="p-1 flex-shrink-0">
                 <ArrowLeft className="h-6 w-6 text-slate-900" />
               </button>
-              <div className="flex flex-col">
-                <h1 className="text-lg font-black text-slate-900 leading-tight">{activeCategory}</h1>
-                <div className="flex items-center text-[10px] text-primary font-bold">
-                  Delivering to : <span className="text-slate-500 ml-1">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3" />
+              {isHeaderSearching ? (
+                <div className="flex-1 relative flex items-center">
+                  <Input 
+                    autoFocus
+                    placeholder={`Search in ${activeCategory}...`} 
+                    className="h-10 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary w-full pr-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button 
+                    onClick={() => { setSearchQuery(''); setIsHeaderSearching(false); }}
+                    className="absolute right-3 p-1 text-slate-400"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
+              ) : (
+                <div className="flex flex-col overflow-hidden">
+                  <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
+                  <div className="flex items-center text-[10px] text-primary font-bold">
+                    Delivering to : <span className="text-slate-500 ml-1 truncate">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  </div>
+                </div>
+              )}
+            </div>
+            {!isHeaderSearching && (
+              <div className="flex items-center gap-4 ml-4">
+                <button onClick={() => setIsHeaderSearching(true)} className="p-1">
+                  <Search className="h-6 w-6 text-slate-900" />
+                </button>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <Search className="h-6 w-6 text-slate-900" />
-              <Share2 className="h-6 w-6 text-slate-900" />
-            </div>
+            )}
           </header>
 
           <div className="flex flex-1 overflow-hidden">
@@ -296,21 +319,21 @@ export default function CustomerDashboard() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
         <button 
-          onClick={() => setCurrentView('home')}
+          onClick={() => { setCurrentView('home'); setIsHeaderSearching(false); }}
           className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}
         >
           <HomeIcon className="h-6 w-6" />
           <span className="text-[10px] font-bold">Home</span>
         </button>
         <button 
-          onClick={() => setCurrentView('favorites')}
+          onClick={() => { setCurrentView('favorites'); setIsHeaderSearching(false); }}
           className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}
         >
           <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
           <span className="text-[10px] font-bold">Favorites</span>
         </button>
         <button 
-          onClick={() => setCurrentView('categories')}
+          onClick={() => { setCurrentView('categories'); setIsHeaderSearching(false); }}
           className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}
         >
           <LayoutGrid className="h-6 w-6" />
