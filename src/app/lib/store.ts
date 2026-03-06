@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { Product, CartItem, Order, UserRole, User } from '@/app/types';
+import { Product, CartItem, Order, UserRole, User, OrderStatus } from '@/app/types';
 
 interface AppState {
   user: User | null;
@@ -14,7 +14,7 @@ interface AppState {
   updateCartQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   placeOrder: (order: Order) => void;
-  updateOrderStatus: (orderId: string, status: Order.status) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
 }
 
 // Minimal products for initial catalog
@@ -27,9 +27,7 @@ const INITIAL_PRODUCTS: Product[] = [
   { id: '6', name: 'Gala Apples', category: 'Fruits', price: 1.29, inventory: 60, imageUrl: 'https://picsum.photos/seed/fruit2/300/300', description: 'Sweet and crunchy Gala apples.' },
 ];
 
-import { create as createZustand } from 'zustand';
-
-export const useAppStore = createZustand<AppState>((set) => ({
+export const useAppStore = create<AppState>((set) => ({
   user: null,
   products: INITIAL_PRODUCTS,
   cart: [],
