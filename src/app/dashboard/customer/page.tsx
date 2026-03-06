@@ -346,7 +346,7 @@ export default function CustomerDashboard() {
               <div className="relative">
                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                  placeholder="Street name, House No, Block" 
+                  placeholder="Street name, House No, Area" 
                   className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
                   value={onboardingForm.address}
                   onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
@@ -398,76 +398,57 @@ export default function CustomerDashboard() {
         <>
           {/* Header */}
           {(currentView === 'home' || currentView === 'categories') && (
-            <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-black uppercase tracking-tight text-slate-400">Delivering in</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-3xl font-black text-slate-900">9 mins</span>
-                    <div className="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border border-amber-200">
-                      <Clock className="h-3 w-3" /> 24/7
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleEditLocation}
-                    className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px] hover:text-primary transition-colors"
-                  >
-                    <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                    {profile.address || 'Set delivery address'} 
-                    <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="bg-slate-100 p-2 rounded-full flex items-center gap-1">
-                    <Wallet className="h-4 w-4 text-slate-600" />
-                    <span className="text-xs font-bold text-slate-700">₹0</span>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
-                        <UserIcon className="h-5 w-5 text-slate-700" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl w-48">
-                      <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        {user?.name || 'My Profile'}
-                      </div>
-                      <Separator className="my-1" />
-                      <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
-                        <MapPin className="h-4 w-4 mr-2" /> Edit Location
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
-                        <Package className="h-4 w-4 mr-2" /> My Orders
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
-                        <LogOut className="h-4 w-4 mr-2" /> Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+            <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex items-center gap-4">
+              <button 
+                onClick={() => setCurrentView('home')} 
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+              >
+                <ArrowLeft className="h-6 w-6 text-slate-900" />
+              </button>
+              
+              <h1 className="text-xl font-black text-slate-900 whitespace-nowrap hidden sm:block">
+                {currentView === 'home' ? 'SwiftCart' : 'Categories'}
+              </h1>
+
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input 
+                  placeholder='Search groceries...' 
+                  className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
 
-              {currentView === 'home' && (
-                <div className="relative mt-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input 
-                    placeholder='Search "milk", "bread" or "fruit"' 
-                    className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                </div>
-              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10 shrink-0">
+                    <UserIcon className="h-5 w-5 text-slate-700" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl w-48">
+                  <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {user?.name || 'My Profile'}
+                  </div>
+                  <Separator className="my-1" />
+                  <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
+                    <MapPin className="h-4 w-4 mr-2" /> Edit Location
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
+                    <Package className="h-4 w-4 mr-2" /> My Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
+                    <LogOut className="h-4 w-4 mr-2" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </header>
           )}
 
           {/* Home View */}
           {currentView === 'home' && (
             <main className="flex-1 overflow-x-hidden">
-              <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
+              <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white border-b border-slate-50">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.name}
