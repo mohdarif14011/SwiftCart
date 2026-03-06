@@ -82,8 +82,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // Fallback coordinates
-const FALLBACK_LAT = 25.5808;
-const FALLBACK_LNG = 84.8327;
+const FALLBACK_LAT = 25.4358;
+const FALLBACK_LNG = 81.8463;
 
 export default function CustomerDashboard() {
   const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite, setUser } = useAppStore();
@@ -121,6 +121,19 @@ export default function CustomerDashboard() {
     }
   }, [isClient, isProfileLoading, profile, user]);
 
+  // Handle address detection whenever GPS location changes
+  useEffect(() => {
+    if (gpsLocation) {
+      // Simulate reverse geocoding based on coordinates
+      if (gpsLocation.lat === FALLBACK_LAT && gpsLocation.lng === FALLBACK_LNG) {
+        setDetectedAddress("Default Location - Prayagraj Area");
+      } else {
+        // Mock a dynamic address string that updates with GPS
+        setDetectedAddress(`Detected: Area near ${gpsLocation.lat.toFixed(4)}°N, ${gpsLocation.lng.toFixed(4)}°E`);
+      }
+    }
+  }, [gpsLocation]);
+
   const handleAutoLocate = () => {
     setLocating(true);
     if ("geolocation" in navigator) {
@@ -130,8 +143,6 @@ export default function CustomerDashboard() {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
-          // Mock address for demo purposes
-          setDetectedAddress("Harwara, Dhoomanganj, Prayagraj");
           setLocating(false);
           toast({ title: "Location detected", description: "Your current position has been pinpointed." });
         },
@@ -140,14 +151,12 @@ export default function CustomerDashboard() {
           setLocating(false);
           // Fallback to coordinates
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
-          setDetectedAddress("Default Location - Prayagraj Area");
           toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default location." });
         }
       );
     } else {
       setLocating(false);
       setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
-      setDetectedAddress("Default Location - Prayagraj Area");
     }
   };
 
@@ -225,7 +234,7 @@ export default function CustomerDashboard() {
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: profile?.address || 'Your saved address',
+      address: profile?.address || detectedAddress || 'Your saved address',
     };
     placeOrder(newOrder);
     setCurrentView('order-success');
