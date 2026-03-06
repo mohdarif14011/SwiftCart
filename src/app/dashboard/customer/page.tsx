@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,12 @@ export default function CustomerDashboard() {
   const { products, cart, orders, user, updateCartQuantity, removeFromCart, placeOrder, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const categories = ['All', ...Array.from(new Set(products.map((p) => p.category)))];
 
@@ -221,7 +226,7 @@ export default function CustomerDashboard() {
                       ) : (
                         <>
                           <CheckCircle2 className="h-3 w-3" />
-                          <span>Placed on {new Date(order.createdAt).toLocaleDateString()}</span>
+                          <span>Placed on {isClient ? new Date(order.createdAt).toLocaleDateString() : '...'}</span>
                         </>
                       )}
                     </div>

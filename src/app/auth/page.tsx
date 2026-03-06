@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,13 @@ import { ShoppingCart, User, Shield, Truck } from 'lucide-react';
 export default function AuthPage() {
   const [role, setRole] = useState<UserRole>('CUSTOMER');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const setUser = useAppStore((state) => state.setUser);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -109,7 +114,8 @@ export default function AuthPage() {
           <Button 
             className="w-full py-6 text-lg bg-primary hover:bg-primary/90" 
             onClick={handleLogin}
-            disabled={loading}
+            disabled={loading || !mounted}
+            suppressHydrationWarning
           >
             {loading ? 'Entering...' : 'Continue to Dashboard'}
           </Button>

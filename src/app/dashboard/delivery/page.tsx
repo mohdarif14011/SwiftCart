@@ -14,7 +14,8 @@ import {
   LogOut, 
   Package,
   Clock,
-  ExternalLink
+  ExternalLink,
+  DollarSign
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
@@ -22,13 +23,14 @@ import { useRouter } from 'next/navigation';
 export default function DeliveryDashboard() {
   const { orders, updateOrderStatus, setUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
-  const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
   // Simulated live location coordinates
   const [agentPos, setAgentPos] = useState({ lat: 40.7128, lng: -74.0060 });
 
   useEffect(() => {
+    setIsClient(true);
     const interval = setInterval(() => {
       setAgentPos(prev => ({
         lat: prev.lat + (Math.random() - 0.5) * 0.001,
@@ -210,7 +212,7 @@ export default function DeliveryDashboard() {
                       </div>
                       <div>
                         <p className="font-bold">ORD-{order.id}</p>
-                        <p className="text-xs text-muted-foreground">Delivered at {new Date(order.createdAt).toLocaleTimeString()}</p>
+                        <p className="text-xs text-muted-foreground">Delivered at {isClient ? new Date(order.createdAt).toLocaleTimeString() : '...'}</p>
                       </div>
                     </div>
                     <p className="font-bold text-primary">${order.total.toFixed(2)}</p>
