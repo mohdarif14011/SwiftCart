@@ -26,7 +26,8 @@ import {
   Cookie,
   Sparkles,
   Plus,
-  Minus
+  Minus,
+  Heart
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -92,9 +93,9 @@ export default function CustomerDashboard() {
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+    <div className="min-h-screen bg-white flex flex-col pb-24">
       {/* Header Section */}
-      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
         <div className="flex items-center justify-between mb-2">
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
@@ -115,7 +116,7 @@ export default function CustomerDashboard() {
               <Wallet className="h-4 w-4 text-slate-600" />
               <span className="text-xs font-bold text-slate-700">₹0</span>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
+            <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10" suppressHydrationWarning>
               <UserIcon className="h-5 w-5 text-slate-700" />
             </Button>
           </div>
@@ -129,6 +130,7 @@ export default function CustomerDashboard() {
             className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            suppressHydrationWarning
           />
           <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
@@ -152,7 +154,7 @@ export default function CustomerDashboard() {
         </div>
 
         {/* Content Section */}
-        <div className="px-4 py-6 space-y-8">
+        <div className="px-4 py-4 space-y-8">
           {activeCategory === 'All' ? (
             Object.entries(groupedProducts).map(([category, items]) => (
               <section key={category} className="space-y-4">
@@ -167,15 +169,15 @@ export default function CustomerDashboard() {
                 </div>
                 <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                   {items.map(product => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product} isListView={false} />
                   ))}
                 </div>
               </section>
             ))
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8">
               {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} isListView={true} />
               ))}
             </div>
           )}
@@ -232,7 +234,7 @@ export default function CustomerDashboard() {
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
                           <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
-                          <p className="text-xs font-bold text-primary">${item.price.toFixed(2)}</p>
+                          <p className="text-xs font-bold text-primary">₹{item.price.toFixed(2)}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden h-8">
@@ -259,7 +261,7 @@ export default function CustomerDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-slate-900">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
                       </div>
                     </div>
                   ))
@@ -270,7 +272,7 @@ export default function CustomerDashboard() {
                   <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-medium">Subtotal</span>
-                      <span className="font-bold">${cartTotal.toFixed(2)}</span>
+                      <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-medium">Delivery Fee</span>
@@ -279,10 +281,10 @@ export default function CustomerDashboard() {
                     <Separator />
                     <div className="flex justify-between text-lg font-black">
                       <span>Total</span>
-                      <span className="text-primary">${cartTotal.toFixed(2)}</span>
+                      <span className="text-primary">₹{cartTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout}>
+                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout} suppressHydrationWarning>
                     Place Order
                   </Button>
                 </div>
@@ -295,49 +297,58 @@ export default function CustomerDashboard() {
   );
 }
 
-function ProductCard({ product }: { product: any }) {
+function ProductCard({ product, isListView }: { product: any, isListView: boolean }) {
   const { cart, addToCart, updateCartQuantity } = useAppStore();
   const cartItem = cart.find(i => i.productId === product.id);
 
   return (
-    <div className="min-w-[160px] max-w-[160px] bg-white rounded-2xl border border-slate-100 p-3 flex flex-col shadow-sm relative transition-all hover:shadow-md">
-      {/* Discount Badge */}
-      <Badge className="absolute top-2 left-2 bg-green-100 text-green-700 text-[8px] font-black border-none px-1.5 py-0">
-        20% OFF
-      </Badge>
-
-      {/* Product Image */}
-      <div className="aspect-square w-full mb-3 flex items-center justify-center p-2">
+    <div className={`flex flex-col transition-all group ${isListView ? 'w-full' : 'min-w-[150px] max-w-[150px]'}`}>
+      {/* Image Container */}
+      <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-3 mb-2">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
-          className="object-contain w-full h-full"
+          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-300"
         />
+        <button className="absolute top-2 right-2 text-slate-300 hover:text-destructive transition-colors">
+          <Heart className="h-5 w-5" />
+        </button>
+        
+        {/* Quick Add Button Overlay */}
+        {!cartItem && (
+          <button 
+            onClick={() => addToCart(product)}
+            className="absolute bottom-2 right-2 bg-white text-primary h-8 w-8 rounded-lg shadow-sm border border-slate-100 flex items-center justify-center hover:bg-primary hover:text-white transition-all opacity-0 group-hover:opacity-100"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
-      {/* Product Info */}
-      <div className="flex-1 space-y-1">
-        <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{product.name}</h4>
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-black text-slate-900">${product.price.toFixed(2)}</span>
-          <span className="text-[10px] text-slate-400 line-through">${(product.price * 1.2).toFixed(2)}</span>
+      {/* Meta Info */}
+      <div className="flex items-center justify-between mb-1 px-1">
+        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
+          <Clock className="h-3 w-3" /> 5 mins
         </div>
+        <div className="text-[10px] text-slate-400 font-bold">500 g</div>
       </div>
 
-      {/* Action Area */}
-      <div className="mt-4 space-y-2">
-        <Select defaultValue="1kg">
-          <SelectTrigger className="h-8 text-[10px] font-bold border-slate-200 rounded-lg">
-            <SelectValue placeholder="Select unit" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="250g">250 g</SelectItem>
-            <SelectItem value="500g">500 g</SelectItem>
-            <SelectItem value="1kg">1 kg</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Name */}
+      <h4 className="text-sm font-bold text-slate-900 line-clamp-2 px-1 mb-2 leading-tight min-h-[2.5rem]">
+        {product.name}
+      </h4>
 
-        {cartItem ? (
+      {/* Price & Action Row */}
+      <div className="mt-auto px-1 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-black text-slate-900">₹{product.price}</span>
+            <span className="text-[10px] text-slate-400 line-through">₹{Math.round(product.price * 1.2)}</span>
+          </div>
+          <span className="text-[10px] font-black text-green-600">22% off</span>
+        </div>
+
+        {cartItem && (
           <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg h-8 overflow-hidden">
             <button 
               className="px-2 text-primary hover:bg-primary/5 transition-colors"
@@ -353,14 +364,6 @@ function ProductCard({ product }: { product: any }) {
               <Plus className="h-3 w-3" />
             </button>
           </div>
-        ) : (
-          <Button 
-            variant="outline" 
-            className="w-full h-8 text-[10px] font-black border-primary text-primary hover:bg-primary hover:text-white rounded-lg transition-all"
-            onClick={() => addToCart(product)}
-          >
-            Add to cart
-          </Button>
         )}
       </div>
     </div>
