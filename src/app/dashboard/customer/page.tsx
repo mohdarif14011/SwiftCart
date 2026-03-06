@@ -26,14 +26,18 @@ import {
   Sparkles,
   Plus,
   Minus,
-  Heart
+  Heart,
+  Share2,
+  ArrowLeft,
+  Star,
+  ChevronRight
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = [
-  { name: 'All', icon: ShoppingBag },
   { name: 'Vegetables', icon: Leaf },
   { name: 'Fruits', icon: Apple },
   { name: 'Dairy', icon: Milk },
@@ -45,7 +49,7 @@ const CATEGORIES = [
 export default function CustomerDashboard() {
   const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
@@ -57,28 +61,26 @@ export default function CustomerDashboard() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const filteredProducts = useMemo(() => {
-    let list = products;
-    if (currentView === 'favorites') {
-      list = products.filter(p => favorites.includes(p.id));
-    }
-    
+    const list = products;
     return list.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchQuery, activeCategory, currentView, favorites]);
+  }, [products, searchQuery, activeCategory]);
+
+  const favoritesProducts = useMemo(() => {
+    return products.filter(p => favorites.includes(p.id));
+  }, [products, favorites]);
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, typeof products> = {};
-    const listToGroup = currentView === 'favorites' ? products.filter(p => favorites.includes(p.id)) : products;
-    
-    listToGroup.forEach(p => {
+    products.forEach(p => {
       if (!groups[p.category]) groups[p.category] = [];
       groups[p.category].push(p);
     });
     return groups;
-  }, [products, currentView, favorites]);
+  }, [products]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -98,133 +100,216 @@ export default function CustomerDashboard() {
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-24">
-      {/* Header Section */}
-      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-black uppercase tracking-tight text-slate-400">SwiftCart in</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-3xl font-black text-slate-900">9 minutes</span>
-              <div className="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border border-amber-200">
-                <Clock className="h-3 w-3" /> 24/7
+    <div className="min-h-screen bg-white flex flex-col pb-20">
+      {/* Home View */}
+      {currentView === 'home' && (
+        <>
+          <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-black uppercase tracking-tight text-slate-400">SwiftCart in</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-3xl font-black text-slate-900">9 minutes</span>
+                  <div className="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border border-amber-200">
+                    <Clock className="h-3 w-3" /> 24/7
+                  </div>
+                </div>
+                <button className="flex items-center text-xs text-slate-500 font-medium mt-1">
+                  Harwara, Dhoomanganj, Prayagraj <ChevronDown className="h-3 w-3 ml-0.5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-slate-100 p-2 rounded-full flex items-center gap-1">
+                  <Wallet className="h-4 w-4 text-slate-600" />
+                  <span className="text-xs font-bold text-slate-700">₹0</span>
+                </div>
+                <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
+                  <UserIcon className="h-5 w-5 text-slate-700" />
+                </Button>
               </div>
             </div>
-            <button className="flex items-center text-xs text-slate-500 font-medium mt-1">
-              Harwara, Dhoomanganj, Prayagraj <ChevronDown className="h-3 w-3 ml-0.5" />
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-100 p-2 rounded-full flex items-center gap-1">
-              <Wallet className="h-4 w-4 text-slate-600" />
-              <span className="text-xs font-bold text-slate-700">₹0</span>
+
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input 
+                placeholder='Search "fresh milk" or "vegetables"' 
+                className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
-              <UserIcon className="h-5 w-5 text-slate-700" />
-            </Button>
-          </div>
-        </div>
+          </header>
 
-        {/* Search Bar */}
-        <div className="relative mt-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <Input 
-            placeholder='Search "fresh milk" or "vegetables"' 
-            className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-        </div>
-      </header>
-
-      <main className="flex-1">
-        {currentView !== 'favorites' && (
-          <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => {
-                  setActiveCategory(cat.name);
-                  setCurrentView('home');
-                }}
-                className="flex flex-col items-center gap-2 min-w-[60px]"
-              >
-                <div className={`p-3 rounded-xl transition-all ${activeCategory === cat.name && currentView === 'home' ? 'bg-primary text-white shadow-lg' : 'bg-slate-50 text-slate-600'}`}>
-                  <cat.icon className="h-6 w-6" />
-                </div>
-                <span className={`text-[10px] font-bold ${activeCategory === cat.name && currentView === 'home' ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Content Section */}
-        <div className="px-4 py-4 space-y-8">
-          {currentView === 'favorites' && (
-            <div className="mb-4">
-              <h2 className="text-2xl font-black text-slate-900">My Favorites</h2>
-              <p className="text-sm text-slate-500">Your handpicked groceries</p>
-              {favorites.length === 0 && (
-                <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-                  <Heart className="h-16 w-16 mb-4 opacity-10" />
-                  <p className="font-bold">No favorites yet</p>
-                  <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {(activeCategory === 'All' || currentView === 'favorites') && Object.keys(groupedProducts).length > 0 ? (
-            Object.entries(groupedProducts).map(([category, items]) => (
-              <section key={category} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-900">{category}</h2>
-                  <button 
-                    onClick={() => setActiveCategory(category)}
-                    className="text-primary text-sm font-bold hover:underline"
-                  >
-                    View all
-                  </button>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                  {items.map(product => (
-                    <ProductCard key={product.id} product={product} isListView={false} />
-                  ))}
-                </div>
-              </section>
-            ))
-          ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} isListView={true} />
+          <main className="flex-1 overflow-x-hidden">
+            <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => {
+                    setActiveCategory(cat.name);
+                    setCurrentView('categories');
+                  }}
+                  className="flex flex-col items-center gap-2 min-w-[60px]"
+                >
+                  <div className="p-3 rounded-xl transition-all bg-slate-50 text-slate-600">
+                    <cat.icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500">{cat.name}</span>
+                </button>
               ))}
             </div>
-          )}
+
+            <div className="px-4 py-4 space-y-8">
+              {Object.entries(groupedProducts).map(([category, items]) => (
+                <section key={category} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-black text-slate-900">{category}</h2>
+                    <button 
+                      onClick={() => { setActiveCategory(category); setCurrentView('categories'); }}
+                      className="text-primary text-sm font-bold hover:underline"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                    {items.map(product => (
+                      <ProductCard key={product.id} product={product} layout="horizontal" />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </main>
+        </>
+      )}
+
+      {/* Categories Split-View */}
+      {currentView === 'categories' && (
+        <div className="flex flex-col h-screen overflow-hidden">
+          <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setCurrentView('home')} className="p-1">
+                <ArrowLeft className="h-6 w-6 text-slate-900" />
+              </button>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-black text-slate-900 leading-tight">{activeCategory}</h1>
+                <div className="flex items-center text-[10px] text-primary font-bold">
+                  Delivering to : <span className="text-slate-500 ml-1">Patna Division, Bihar...</span> <ChevronDown className="h-3 w-3" />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Search className="h-6 w-6 text-slate-900" />
+              <Share2 className="h-6 w-6 text-slate-900" />
+            </div>
+          </header>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar Navigation */}
+            <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
+              {CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.name;
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setActiveCategory(cat.name)}
+                    className={cn(
+                      "relative flex flex-col items-center py-4 px-2 text-center transition-all",
+                      isActive ? "bg-white" : "bg-transparent"
+                    )}
+                  >
+                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r-full" />}
+                    <div className={cn(
+                      "w-12 h-12 rounded-full overflow-hidden mb-1 flex items-center justify-center bg-white border-2",
+                      isActive ? "border-green-600" : "border-slate-100"
+                    )}>
+                      <cat.icon className={cn("h-6 w-6", isActive ? "text-green-600" : "text-slate-400")} />
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-bold leading-tight",
+                      isActive ? "text-slate-900" : "text-slate-500"
+                    )}>
+                      {cat.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </aside>
+
+            {/* Main Product Grid */}
+            <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
+                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                  Filters <ChevronDown className="h-3 w-3" />
+                </Button>
+                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                  Sort <ChevronDown className="h-3 w-3" />
+                </Button>
+                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                  Price <ChevronDown className="h-3 w-3" />
+                </Button>
+                <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                  Brand <ChevronDown className="h-3 w-3" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                {filteredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} layout="grid" />
+                ))}
+              </div>
+            </main>
+          </div>
         </div>
-      </main>
+      )}
+
+      {/* Favorites View */}
+      {currentView === 'favorites' && (
+        <>
+          <header className="bg-white px-4 py-6 border-b">
+            <h2 className="text-3xl font-black text-slate-900">Favorites</h2>
+            <p className="text-sm text-slate-500">Your handpicked groceries</p>
+          </header>
+          <main className="flex-1 p-4">
+            {favoritesProducts.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
+                <Heart className="h-16 w-16 mb-4 opacity-10" />
+                <p className="font-bold">No favorites yet</p>
+                <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {favoritesProducts.map(product => (
+                  <ProductCard key={product.id} product={product} layout="grid" />
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      )}
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
         <button 
-          onClick={() => { setCurrentView('home'); setActiveCategory('All'); }}
-          className={`flex flex-col items-center gap-1 ${currentView === 'home' ? 'text-primary' : 'text-slate-400'}`}
+          onClick={() => setCurrentView('home')}
+          className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}
         >
           <HomeIcon className="h-6 w-6" />
           <span className="text-[10px] font-bold">Home</span>
         </button>
         <button 
           onClick={() => setCurrentView('favorites')}
-          className={`flex flex-col items-center gap-1 ${currentView === 'favorites' ? 'text-primary' : 'text-slate-400'}`}
+          className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}
         >
-          <Heart className={`h-6 w-6 ${currentView === 'favorites' ? 'fill-primary' : ''}`} />
+          <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
           <span className="text-[10px] font-bold">Favorites</span>
         </button>
         <button 
-          onClick={() => { setCurrentView('categories'); setActiveCategory('All'); }}
-          className={`flex flex-col items-center gap-1 ${currentView === 'categories' ? 'text-primary' : 'text-slate-400'}`}
+          onClick={() => setCurrentView('categories')}
+          className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}
         >
           <LayoutGrid className="h-6 w-6" />
           <span className="text-[10px] font-bold">Categories</span>
@@ -236,7 +321,7 @@ export default function CustomerDashboard() {
               <ShoppingCart className="h-6 w-6" />
               <span className="text-[10px] font-bold">Cart</span>
               {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
                   {cart.reduce((s, i) => s + i.quantity, 0)}
                 </span>
               )}
@@ -246,7 +331,7 @@ export default function CustomerDashboard() {
             <div className="p-6 h-full flex flex-col">
               <SheetHeader className="mb-6">
                 <SheetTitle className="text-2xl font-black flex items-center gap-2">
-                  <ShoppingCart className="h-6 w-6 text-primary" />
+                  <ShoppingCart className="h-6 w-6 text-green-600" />
                   My Basket
                 </SheetTitle>
               </SheetHeader>
@@ -265,7 +350,7 @@ export default function CustomerDashboard() {
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
                           <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
-                          <p className="text-xs font-bold text-primary">₹{item.price.toFixed(2)}</p>
+                          <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden h-8">
@@ -312,10 +397,10 @@ export default function CustomerDashboard() {
                     <Separator />
                     <div className="flex justify-between text-lg font-black">
                       <span>Total</span>
-                      <span className="text-primary">₹{cartTotal.toFixed(2)}</span>
+                      <span className="text-green-600">₹{cartTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout}>
+                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700" onClick={handleCheckout}>
                     Place Order
                   </Button>
                 </div>
@@ -328,78 +413,92 @@ export default function CustomerDashboard() {
   );
 }
 
-function ProductCard({ product, isListView }: { product: any, isListView: boolean }) {
+function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid' | 'horizontal' }) {
   const { cart, favorites, addToCart, updateCartQuantity, toggleFavorite } = useAppStore();
   const cartItem = cart.find(i => i.productId === product.id);
   const isFavorite = favorites.includes(product.id);
 
   return (
-    <div className={`flex flex-col transition-all group ${isListView ? 'w-full' : 'min-w-[150px] max-w-[150px]'}`}>
+    <div className={cn(
+      "flex flex-col transition-all group",
+      layout === 'horizontal' ? 'min-w-[140px] max-w-[140px]' : 'w-full'
+    )}>
       {/* Image Container */}
-      <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-3 mb-2">
+      <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-3 mb-3 border border-slate-100">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
-          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-300"
+          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
         />
         <button 
           onClick={() => toggleFavorite(product.id)}
-          className={`absolute top-2 right-2 transition-colors ${isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400'}`}
+          className={cn(
+            "absolute top-2 right-2 transition-colors",
+            isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400'
+          )}
         >
-          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
+          <Heart className={cn("h-5 w-5", isFavorite && 'fill-current')} />
         </button>
         
-        {/* Quick Add Button Overlay */}
-        {!cartItem && (
+        {/* ADD Button */}
+        {!cartItem ? (
           <button 
             onClick={() => addToCart(product)}
-            className="absolute bottom-2 right-2 bg-white text-primary h-8 w-8 rounded-lg shadow-sm border border-slate-100 flex items-center justify-center hover:bg-primary hover:text-white transition-all opacity-0 group-hover:opacity-100"
+            className="absolute bottom-2 right-2 bg-white text-green-600 font-black text-xs px-4 py-1.5 rounded-lg shadow-md border border-slate-100 hover:bg-green-600 hover:text-white transition-all"
           >
-            <Plus className="h-5 w-5" />
+            ADD
           </button>
-        )}
-      </div>
-
-      {/* Meta Info */}
-      <div className="flex items-center justify-between mb-1 px-1">
-        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
-          <Clock className="h-3 w-3" /> 5 mins
-        </div>
-        <div className="text-[10px] text-slate-400 font-bold">500 g</div>
-      </div>
-
-      {/* Name */}
-      <h4 className="text-sm font-bold text-slate-900 line-clamp-2 px-1 mb-2 leading-tight min-h-[2.5rem]">
-        {product.name}
-      </h4>
-
-      {/* Price & Action Row */}
-      <div className="mt-auto px-1 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-black text-slate-900">₹{product.price}</span>
-            <span className="text-[10px] text-slate-400 line-through">₹{Math.round(product.price * 1.2)}</span>
-          </div>
-          <span className="text-[10px] font-black text-green-600">22% off</span>
-        </div>
-
-        {cartItem && (
-          <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg h-8 overflow-hidden">
+        ) : (
+          <div className="absolute bottom-2 right-2 bg-green-600 text-white flex items-center rounded-lg shadow-md overflow-hidden">
             <button 
-              className="px-2 text-primary hover:bg-primary/5 transition-colors"
+              className="px-2 py-1 hover:bg-green-700 transition-colors"
               onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
             >
               <Minus className="h-3 w-3" />
             </button>
-            <span className="text-xs font-black text-primary">{cartItem.quantity}</span>
+            <span className="px-2 text-xs font-black">{cartItem.quantity}</span>
             <button 
-              className="px-2 text-primary hover:bg-primary/5 transition-colors"
+              className="px-2 py-1 hover:bg-green-700 transition-colors"
               onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
             >
               <Plus className="h-3 w-3" />
             </button>
           </div>
         )}
+      </div>
+
+      {/* Product Details */}
+      <div className="flex flex-col px-1 gap-1">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 border border-green-600 flex items-center justify-center rounded-[2px]">
+            <div className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+          </div>
+          <span className="text-[10px] text-slate-500 font-bold">500 g</span>
+        </div>
+
+        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8">
+          {product.name}
+        </h4>
+
+        <div className="flex items-center gap-1">
+          <div className="flex items-center">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />
+            ))}
+          </div>
+          <span className="text-[8px] text-slate-400 font-bold">(2,340)</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+          <Clock className="h-3 w-3 text-green-600" /> 12 MINS
+        </div>
+
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className="text-sm font-black text-slate-900">₹{product.price}</span>
+          <span className="text-[10px] text-slate-400 line-through">₹{Math.round(product.price * 1.2)}</span>
+          <span className="text-[10px] font-black text-green-600 ml-auto">22% OFF</span>
+        </div>
+        <div className="text-[9px] text-slate-400 font-medium">₹{(product.price / 0.5).toFixed(1)}/kg</div>
       </div>
     </div>
   );
