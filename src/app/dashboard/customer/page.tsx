@@ -68,6 +68,14 @@ const CATEGORIES = [
   { name: 'Kitchen Essentials', icon: CookingPot },
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+  CONFIRMED: 'Order Confirmed',
+  PREPARING: 'Ordered being prepared',
+  PICKED_UP: 'Picked up',
+  OUT_FOR_DELIVERY: 'Out for delivery',
+  DELIVERED: 'Delivered',
+};
+
 export default function CustomerDashboard() {
   const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -468,7 +476,7 @@ export default function CustomerDashboard() {
                 <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Current Status</span>
                 <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-2">
                   <Clock className="h-3 w-3" />
-                  {latestOrder.status.replace(/_/g, ' ')}
+                  {STATUS_LABELS[latestOrder.status] || latestOrder.status.replace(/_/g, ' ')}
                 </div>
               </div>
               <Separator />

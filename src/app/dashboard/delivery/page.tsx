@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { OrderStatus } from '@/app/types';
 
 export default function DeliveryDashboard() {
   const { orders, updateOrderStatus, setUser } = useAppStore();
@@ -40,10 +41,12 @@ export default function DeliveryDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStatusUpdate = (orderId: string, currentStatus: string) => {
-    let nextStatus: any = 'OUT_FOR_DELIVERY';
+  const handleStatusUpdate = (orderId: string, currentStatus: OrderStatus) => {
+    let nextStatus: OrderStatus = 'DELIVERED';
+    
     if (currentStatus === 'CONFIRMED') nextStatus = 'PREPARING';
-    else if (currentStatus === 'PREPARING') nextStatus = 'OUT_FOR_DELIVERY';
+    else if (currentStatus === 'PREPARING') nextStatus = 'PICKED_UP';
+    else if (currentStatus === 'PICKED_UP') nextStatus = 'OUT_FOR_DELIVERY';
     else if (currentStatus === 'OUT_FOR_DELIVERY') nextStatus = 'DELIVERED';
     
     updateOrderStatus(orderId, nextStatus);
@@ -190,7 +193,8 @@ export default function DeliveryDashboard() {
                           onClick={() => handleStatusUpdate(order.id, order.status)}
                         >
                           {order.status === 'CONFIRMED' ? 'Start Preparation' : 
-                           order.status === 'PREPARING' ? 'Set Out for Delivery' : 
+                           order.status === 'PREPARING' ? 'Mark as Picked Up' : 
+                           order.status === 'PICKED_UP' ? 'Set Out for Delivery' :
                            'Mark as Delivered'}
                         </Button>
                       </CardFooter>

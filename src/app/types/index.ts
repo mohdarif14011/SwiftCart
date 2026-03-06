@@ -26,7 +26,7 @@ export interface CartItem {
   imageUrl: string;
 }
 
-export type OrderStatus = 'CONFIRMED' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+export type OrderStatus = 'CONFIRMED' | 'PREPARING' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
 
 export interface Order {
   id: string;
