@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,11 +24,15 @@ import {
   Milk,
   Croissant,
   Cookie,
-  Sparkles
+  Sparkles,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 const CATEGORIES = [
   { name: 'All', icon: ShoppingBag },
@@ -40,17 +45,34 @@ const CATEGORIES = [
 ];
 
 export default function CustomerDashboard() {
-  const { cart, user, updateCartQuantity, removeFromCart, placeOrder, setUser } = useAppStore();
+  const { cart, user, products, updateCartQuantity, removeFromCart, addToCart, placeOrder } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, activeCategory]);
+
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, typeof products> = {};
+    products.forEach(p => {
+      if (!groups[p.category]) groups[p.category] = [];
+      groups[p.category].push(p);
+    });
+    return groups;
+  }, [products]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -64,18 +86,19 @@ export default function CustomerDashboard() {
       address: 'Harwara, Dhoomanganj, Prayagraj',
     };
     placeOrder(newOrder);
+    toast({ title: "Order Placed", description: "Your groceries are on the way!" });
   };
 
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
       {/* Header Section */}
-      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50">
+      <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
-              <span className="text-sm font-black uppercase tracking-tight text-slate-900">SwiftCart in</span>
+              <span className="text-xs font-black uppercase tracking-tight text-slate-400">SwiftCart in</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-3xl font-black text-slate-900">9 minutes</span>
@@ -103,10 +126,9 @@ export default function CustomerDashboard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
           <Input 
             placeholder='Search "fresh milk" or "vegetables"' 
-            className="pl-10 pr-10 h-12 bg-white border-slate-200 rounded-xl shadow-sm text-base focus-visible:ring-primary"
+            className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            suppressHydrationWarning
           />
           <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
@@ -121,18 +143,48 @@ export default function CustomerDashboard() {
               onClick={() => setActiveCategory(cat.name)}
               className="flex flex-col items-center gap-2 min-w-[60px]"
             >
-              <div className={`p-3 rounded-xl transition-all ${activeCategory === cat.name ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600'}`}>
+              <div className={`p-3 rounded-xl transition-all ${activeCategory === cat.name ? 'bg-primary text-white shadow-lg' : 'bg-slate-50 text-slate-600'}`}>
                 <cat.icon className="h-6 w-6" />
               </div>
-              <span className={`text-xs font-bold ${activeCategory === cat.name ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
+              <span className={`text-[10px] font-bold ${activeCategory === cat.name ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
             </button>
           ))}
+        </div>
+
+        {/* Content Section */}
+        <div className="px-4 py-6 space-y-8">
+          {activeCategory === 'All' ? (
+            Object.entries(groupedProducts).map(([category, items]) => (
+              <section key={category} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-black text-slate-900">{category}</h2>
+                  <button 
+                    onClick={() => setActiveCategory(category)}
+                    className="text-primary text-sm font-bold hover:underline"
+                  >
+                    View all
+                  </button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                  {items.map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
-        <button className="flex flex-col items-center gap-1 text-slate-900">
+        <button className="flex flex-col items-center gap-1 text-primary">
           <HomeIcon className="h-6 w-6" />
           <span className="text-[10px] font-bold">Home</span>
         </button>
@@ -147,88 +199,170 @@ export default function CustomerDashboard() {
         
         <Sheet>
           <SheetTrigger asChild>
-            <button className="flex flex-col items-center gap-1 text-slate-400 relative" suppressHydrationWarning>
+            <button className="flex flex-col items-center gap-1 text-slate-400 relative">
               <ShoppingCart className="h-6 w-6" />
               <span className="text-[10px] font-bold">Cart</span>
               {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-accent text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
                   {cart.reduce((s, i) => s + i.quantity, 0)}
                 </span>
               )}
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                My Shopping Cart
-              </SheetTitle>
-            </SheetHeader>
-            <div className="mt-8 flex flex-col h-full pb-10">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-[2.5rem] p-0">
+            <div className="p-6 h-full flex flex-col">
+              <SheetHeader className="mb-6">
+                <SheetTitle className="text-2xl font-black flex items-center gap-2">
+                  <ShoppingCart className="h-6 w-6 text-primary" />
+                  My Basket
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto space-y-4">
                 {cart.length === 0 ? (
-                  <div className="text-center py-20">
-                    <Package className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-bold">Your cart is empty</p>
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                    <Package className="h-16 w-16 mb-4 opacity-20" />
+                    <p className="font-bold">Your basket is empty</p>
                   </div>
                 ) : (
                   cart.map((item) => (
-                    <div key={item.productId} className="flex gap-4 p-2 bg-slate-50 rounded-2xl">
-                      <div className="h-20 w-20 relative rounded-xl overflow-hidden flex-shrink-0">
-                        <img src={item.imageUrl} alt={item.name} className="object-cover w-full h-full" />
+                    <div key={item.productId} className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="h-20 w-20 relative rounded-xl overflow-hidden bg-white border border-slate-100 p-2">
+                        <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
                       </div>
-                      <div className="flex-1 flex flex-col justify-between py-1">
+                      <div className="flex-1 flex flex-col justify-between">
                         <div>
-                          <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
+                          <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
                           <p className="text-xs font-bold text-primary">${item.price.toFixed(2)}</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Button 
-                            variant="outline" size="icon" className="h-8 w-8 rounded-lg"
-                            onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                            suppressHydrationWarning
-                          >-</Button>
-                          <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
-                          <Button 
-                            variant="outline" size="icon" className="h-8 w-8 rounded-lg"
-                            onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                            suppressHydrationWarning
-                          >+</Button>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden h-8">
+                            <button 
+                              className="px-2 hover:bg-slate-50"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="px-3 text-xs font-black">{item.quantity}</span>
+                            <button 
+                              className="px-2 hover:bg-slate-50"
+                              onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <button 
+                            className="text-[10px] font-bold text-destructive"
+                            onClick={() => removeFromCart(item.productId)}
+                          >
+                            Remove
+                          </button>
                         </div>
                       </div>
-                      <div className="text-right flex flex-col justify-between py-1">
-                        <span className="font-black text-sm text-slate-900">
-                          ${(item.price * item.quantity).toFixed(2)}
-                        </span>
-                        <Button 
-                          variant="ghost" size="sm" className="text-destructive font-bold h-8 p-0"
-                          onClick={() => removeFromCart(item.productId)}
-                          suppressHydrationWarning
-                        >Remove</Button>
+                      <div className="text-right">
+                        <p className="font-black text-slate-900">${(item.price * item.quantity).toFixed(2)}</p>
                       </div>
                     </div>
                   ))
                 )}
               </div>
               {cart.length > 0 && (
-                <div className="pt-6 space-y-4">
-                  <Separator />
-                  <div className="flex justify-between items-center text-xl font-black">
-                    <span>Total</span>
-                    <span className="text-primary">${cartTotal.toFixed(2)}</span>
+                <div className="mt-6 space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Subtotal</span>
+                      <span className="font-bold">${cartTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Delivery Fee</span>
+                      <span className="text-green-600 font-bold">FREE</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-lg font-black">
+                      <span>Total</span>
+                      <span className="text-primary">${cartTotal.toFixed(2)}</span>
+                    </div>
                   </div>
-                  <Button className="w-full bg-slate-900 py-7 text-lg rounded-2xl font-black" onClick={handleCheckout} suppressHydrationWarning>
-                    Checkout Now
+                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout}>
+                    Place Order
                   </Button>
-                  <p className="text-[10px] text-center text-slate-400 font-bold flex items-center justify-center gap-1">
-                    <MapPin className="h-3 w-3" /> Delivery to: Harwara, Dhoomanganj
-                  </p>
                 </div>
               )}
             </div>
           </SheetContent>
         </Sheet>
       </nav>
+    </div>
+  );
+}
+
+function ProductCard({ product }: { product: any }) {
+  const { cart, addToCart, updateCartQuantity } = useAppStore();
+  const cartItem = cart.find(i => i.productId === product.id);
+
+  return (
+    <div className="min-w-[160px] max-w-[160px] bg-white rounded-2xl border border-slate-100 p-3 flex flex-col shadow-sm relative transition-all hover:shadow-md">
+      {/* Discount Badge */}
+      <Badge className="absolute top-2 left-2 bg-green-100 text-green-700 text-[8px] font-black border-none px-1.5 py-0">
+        20% OFF
+      </Badge>
+
+      {/* Product Image */}
+      <div className="aspect-square w-full mb-3 flex items-center justify-center p-2">
+        <img 
+          src={product.imageUrl} 
+          alt={product.name} 
+          className="object-contain w-full h-full"
+        />
+      </div>
+
+      {/* Product Info */}
+      <div className="flex-1 space-y-1">
+        <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{product.name}</h4>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-black text-slate-900">${product.price.toFixed(2)}</span>
+          <span className="text-[10px] text-slate-400 line-through">${(product.price * 1.2).toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Action Area */}
+      <div className="mt-4 space-y-2">
+        <Select defaultValue="1kg">
+          <SelectTrigger className="h-8 text-[10px] font-bold border-slate-200 rounded-lg">
+            <SelectValue placeholder="Select unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="250g">250 g</SelectItem>
+            <SelectItem value="500g">500 g</SelectItem>
+            <SelectItem value="1kg">1 kg</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {cartItem ? (
+          <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg h-8 overflow-hidden">
+            <button 
+              className="px-2 text-primary hover:bg-primary/5 transition-colors"
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="text-xs font-black text-primary">{cartItem.quantity}</span>
+            <button 
+              className="px-2 text-primary hover:bg-primary/5 transition-colors"
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <Button 
+            variant="outline" 
+            className="w-full h-8 text-[10px] font-black border-primary text-primary hover:bg-primary hover:text-white rounded-lg transition-all"
+            onClick={() => addToCart(product)}
+          >
+            Add to cart
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
