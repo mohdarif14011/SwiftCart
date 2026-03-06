@@ -36,6 +36,24 @@
       "description": "City map with delivery route",
       "imageUrl": "https://picsum.photos/seed/map/800/600",
       "imageHint": "city map"
+    },
+    {
+      "id": "banner-newly-launched",
+      "description": "Newly launched products banner",
+      "imageUrl": "https://picsum.photos/seed/newlaunch/400/500",
+      "imageHint": "new launch"
+    },
+    {
+      "id": "banner-ramzan",
+      "description": "Ramzan special banner",
+      "imageUrl": "https://picsum.photos/seed/ramzan/400/500",
+      "imageHint": "ramzan mubarak"
+    },
+    {
+      "id": "banner-gifting",
+      "description": "Gifting specials banner",
+      "imageUrl": "https://picsum.photos/seed/gifting/400/500",
+      "imageHint": "gift box"
     }
   ]
 }
