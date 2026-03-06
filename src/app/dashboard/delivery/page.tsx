@@ -28,14 +28,14 @@ export default function DeliveryDashboard() {
   const router = useRouter();
 
   // Simulated live location coordinates
-  const [agentPos, setAgentPos] = useState({ lat: 40.7128, lng: -74.0060 });
+  const [agentPos, setAgentPos] = useState({ lat: 25.5808, lng: 84.8327 });
 
   useEffect(() => {
     setIsClient(true);
     const interval = setInterval(() => {
       setAgentPos(prev => ({
-        lat: prev.lat + (Math.random() - 0.5) * 0.001,
-        lng: prev.lng + (Math.random() - 0.5) * 0.001,
+        lat: prev.lat + (Math.random() - 0.5) * 0.0005,
+        lng: prev.lng + (Math.random() - 0.5) * 0.0005,
       }));
     }, 5000);
     return () => clearInterval(interval);
@@ -92,23 +92,26 @@ export default function DeliveryDashboard() {
                 GPS Active
               </Badge>
             </CardHeader>
-            <CardContent className="p-0 h-[400px] relative bg-muted flex items-center justify-center">
-              <img 
-                src="https://picsum.photos/seed/delivery-map/1200/800" 
-                alt="Map" 
-                className="w-full h-full object-cover opacity-80"
+            <CardContent className="p-0 h-[400px] relative bg-muted overflow-hidden">
+              <iframe
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                allowFullScreen
+                src={`https://maps.google.com/maps?q=${agentPos.lat},${agentPos.lng}&z=16&output=embed`}
+                className="w-full h-full grayscale opacity-80"
               />
               <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
               
-              {/* Simulated Map Markers */}
-              <div 
-                className="absolute w-8 h-8 bg-primary rounded-full border-2 border-white shadow-lg flex items-center justify-center transition-all duration-500"
-                style={{ top: '40%', left: '45%' }}
-              >
-                <Truck className="h-4 w-4 text-white" />
+              {/* Overlay Marker Simulation */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div 
+                  className="w-10 h-10 bg-primary rounded-full border-4 border-white shadow-2xl flex items-center justify-center animate-bounce"
+                >
+                  <Truck className="h-5 w-5 text-white" />
+                </div>
               </div>
-              <div className="absolute w-4 h-4 bg-accent rounded-full border-2 border-white shadow-lg" style={{ top: '30%', left: '60%' }}></div>
-              <div className="absolute w-4 h-4 bg-accent rounded-full border-2 border-white shadow-lg" style={{ top: '70%', left: '20%' }}></div>
               
               <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-lg border shadow-sm flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -117,7 +120,7 @@ export default function DeliveryDashboard() {
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Location</p>
-                    <p className="text-sm font-semibold">Broadway & W 42nd St, New York</p>
+                    <p className="text-sm font-semibold">Active Session: {agentPos.lat.toFixed(4)}, {agentPos.lng.toFixed(4)}</p>
                   </div>
                 </div>
                 <Button size="sm" variant="outline" className="text-xs gap-1">
@@ -178,7 +181,7 @@ export default function DeliveryDashboard() {
                                 </div>
                               )}
                             </div>
-                            <p className="text-muted-foreground">{order.items.length} items • ${order.total.toFixed(2)}</p>
+                            <p className="text-muted-foreground">{order.items.length} items • ₹{order.total.toFixed(2)}</p>
                           </div>
                           <div className="flex gap-2">
                             <Button variant="outline" size="icon" className="h-8 w-8 rounded-full text-primary border-primary">
@@ -219,7 +222,7 @@ export default function DeliveryDashboard() {
                         <p className="text-xs text-muted-foreground">Delivered at {isClient ? new Date(order.createdAt).toLocaleTimeString() : '...'}</p>
                       </div>
                     </div>
-                    <p className="font-bold text-primary">${order.total.toFixed(2)}</p>
+                    <p className="font-bold text-primary">₹{order.total.toFixed(2)}</p>
                   </div>
                 ))
               )}
@@ -236,7 +239,7 @@ export default function DeliveryDashboard() {
               <CardTitle className="text-lg">Earnings Today</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-black font-headline tracking-tighter">$142.50</p>
+              <p className="text-4xl font-black font-headline tracking-tighter">₹1,425.00</p>
               <div className="mt-4 flex items-center gap-4 text-sm font-medium">
                 <div className="flex flex-col">
                   <span>Orders</span>
@@ -244,11 +247,11 @@ export default function DeliveryDashboard() {
                 </div>
                 <div className="flex flex-col">
                   <span>Tips</span>
-                  <span className="text-xl">$42.00</span>
+                  <span className="text-xl">₹420.00</span>
                 </div>
                 <div className="flex flex-col">
                   <span>Bonus</span>
-                  <span className="text-xl">$15.00</span>
+                  <span className="text-xl">₹150.00</span>
                 </div>
               </div>
             </CardContent>
@@ -268,7 +271,7 @@ export default function DeliveryDashboard() {
             <CardContent className="space-y-4">
               <div className="p-3 bg-primary/5 rounded-lg border-l-4 border-primary space-y-1">
                 <p className="text-xs font-bold">New Bonus Available!</p>
-                <p className="text-[10px] text-muted-foreground">Complete 3 more orders before 9 PM for a $20 bonus.</p>
+                <p className="text-[10px] text-muted-foreground">Complete 3 more orders before 9 PM for a ₹200 bonus.</p>
               </div>
               <div className="p-3 bg-accent/5 rounded-lg border-l-4 border-accent space-y-1">
                 <p className="text-xs font-bold">Traffic Alert</p>

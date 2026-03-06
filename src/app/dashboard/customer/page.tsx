@@ -80,6 +80,10 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: 'Delivered',
 };
 
+// Fallback coordinates
+const FALLBACK_LAT = 25.5808;
+const FALLBACK_LNG = 84.8327;
+
 export default function CustomerDashboard() {
   const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,14 +134,14 @@ export default function CustomerDashboard() {
         (error) => {
           console.error(error);
           setLocating(false);
-          // Fallback to a default location for demo
-          setGpsLocation({ lat: 25.4358, lng: 81.8463 });
+          // Fallback to coordinates from user screenshot
+          setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
           toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default location." });
         }
       );
     } else {
       setLocating(false);
-      setGpsLocation({ lat: 25.4358, lng: 81.8463 });
+      setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
     }
   };
 
@@ -251,10 +255,15 @@ export default function CustomerDashboard() {
           </div>
           
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
-            <img 
-              src="https://picsum.photos/seed/deliverymap/1200/1200" 
-              alt="Map" 
-              className="w-full h-full object-cover opacity-60 grayscale"
+            <iframe
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=16&output=embed`}
+              className="w-full h-full opacity-70 grayscale"
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative">
