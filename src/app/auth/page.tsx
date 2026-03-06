@@ -1,126 +1,69 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { UserRole } from '@/app/types';
-import { useAppStore } from '@/app/lib/store';
-import { ShoppingCart, User, Shield, Truck } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShoppingCart, User, Shield, Truck, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
-export default function AuthPage() {
-  const [role, setRole] = useState<UserRole>('CUSTOMER');
-  const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const router = useRouter();
-  const setUser = useAppStore((state) => state.setUser);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const handleLogin = async () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const mockUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: role === 'ADMIN' ? 'Admin User' : role === 'DELIVERY_AGENT' ? 'Agent Swift' : 'Happy Customer',
-        email: 'user@example.com',
-        role,
-      };
-      setUser(mockUser);
-      setLoading(false);
-      
-      if (role === 'CUSTOMER') router.push('/dashboard/customer');
-      else if (role === 'ADMIN') router.push('/dashboard/admin');
-      else if (role === 'DELIVERY_AGENT') router.push('/dashboard/delivery');
-    }, 1000);
-  };
-
+export default function AuthSelectionPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-lg border-none">
-        <CardHeader className="text-center space-y-1">
+      <div className="w-full max-w-lg space-y-6">
+        <div className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <div className="bg-primary p-3 rounded-2xl">
-              <ShoppingCart className="h-8 w-8 text-white" />
+            <div className="bg-primary p-4 rounded-3xl shadow-lg">
+              <ShoppingCart className="h-10 w-10 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold font-headline text-primary">SwiftCart Login</CardTitle>
-          <CardDescription>Select your role to enter the platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <RadioGroup
-              defaultValue="CUSTOMER"
-              onValueChange={(v) => setRole(v as UserRole)}
-              className="grid grid-cols-1 gap-4"
-            >
-              <div>
-                <RadioGroupItem value="CUSTOMER" id="customer" className="peer sr-only" />
-                <Label
-                  htmlFor="customer"
-                  className="flex items-center justify-between rounded-lg border-2 border-muted bg-white p-4 hover:bg-accent/5 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <User className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-semibold">Customer</p>
-                      <p className="text-xs text-muted-foreground">Shop and track your orders</p>
-                    </div>
-                  </div>
-                </Label>
-              </div>
+          <h1 className="text-4xl font-black font-headline text-primary tracking-tight">SwiftCart</h1>
+          <p className="text-muted-foreground">Select your portal to continue</p>
+        </div>
 
-              <div>
-                <RadioGroupItem value="DELIVERY_AGENT" id="delivery" className="peer sr-only" />
-                <Label
-                  htmlFor="delivery"
-                  className="flex items-center justify-between rounded-lg border-2 border-muted bg-white p-4 hover:bg-accent/5 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <Truck className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-semibold">Delivery Agent</p>
-                      <p className="text-xs text-muted-foreground">Deliver orders and update status</p>
-                    </div>
+        <div className="grid grid-cols-1 gap-4">
+          <Link href="/auth/customer">
+            <Card className="hover:border-primary cursor-pointer transition-all group overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center p-6 gap-6">
+                  <div className="bg-primary/10 p-4 rounded-2xl group-hover:bg-primary group-hover:text-white transition-colors">
+                    <User className="h-8 w-8 text-primary group-hover:text-white" />
                   </div>
-                </Label>
-              </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold">Customer Portal</h3>
+                    <p className="text-sm text-muted-foreground">Shop fresh groceries and track deliveries</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
-              <div>
-                <RadioGroupItem value="ADMIN" id="admin" className="peer sr-only" />
-                <Label
-                  htmlFor="admin"
-                  className="flex items-center justify-between rounded-lg border-2 border-muted bg-white p-4 hover:bg-accent/5 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <Shield className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-semibold">Administrator</p>
-                      <p className="text-xs text-muted-foreground">Manage products and inventory</p>
+          <Link href="/auth/staff">
+            <Card className="hover:border-accent cursor-pointer transition-all group overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center p-6 gap-6">
+                  <div className="bg-accent/10 p-4 rounded-2xl group-hover:bg-accent group-hover:text-white transition-colors">
+                    <div className="flex gap-1">
+                      <Shield className="h-8 w-8 text-accent group-hover:text-white" />
+                      <Truck className="h-8 w-8 text-accent group-hover:text-white" />
                     </div>
                   </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            className="w-full py-6 text-lg bg-primary hover:bg-primary/90" 
-            onClick={handleLogin}
-            disabled={loading || !mounted}
-            suppressHydrationWarning
-          >
-            {loading ? 'Entering...' : 'Continue to Dashboard'}
-          </Button>
-        </CardFooter>
-      </Card>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold">Staff Portal</h3>
+                    <p className="text-sm text-muted-foreground">Admins and Delivery Agent access only</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="text-center">
+          <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+            Return to Homepage
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
