@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { Product, CartItem, Order, UserRole, User, OrderStatus } from '@/app/types';
 
@@ -17,14 +16,17 @@ interface AppState {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
 }
 
-// Minimal products for initial catalog
+// Minimal products for initial catalog - Strictly Grocery focused
 const INITIAL_PRODUCTS: Product[] = [
-  { id: '1', name: 'Organic Bananas', category: 'Fruits', price: 0.99, inventory: 50, imageUrl: 'https://picsum.photos/seed/fruit1/300/300', description: 'Fresh organic bananas from Ecuador.' },
-  { id: '2', name: 'Fresh Whole Milk', category: 'Dairy', price: 3.49, inventory: 20, imageUrl: 'https://picsum.photos/seed/dairy1/300/300', description: 'Pasture-raised whole milk, 1 gallon.' },
-  { id: '3', name: 'Sourdough Bread', category: 'Bakery', price: 5.99, inventory: 15, imageUrl: 'https://picsum.photos/seed/bakery1/300/300', description: 'Artisanal sourdough baked fresh daily.' },
-  { id: '4', name: 'Baby Spinach', category: 'Vegetables', price: 2.99, inventory: 30, imageUrl: 'https://picsum.photos/seed/veg1/300/300', description: 'Pre-washed baby spinach leaves.' },
-  { id: '5', name: 'Greek Yogurt', category: 'Dairy', price: 1.49, inventory: 40, imageUrl: 'https://picsum.photos/seed/dairy2/300/300', description: 'Plain non-fat Greek yogurt.' },
-  { id: '6', name: 'Gala Apples', category: 'Fruits', price: 1.29, inventory: 60, imageUrl: 'https://picsum.photos/seed/fruit2/300/300', description: 'Sweet and crunchy Gala apples.' },
+  { id: '1', name: 'Fresh Bananas', category: 'Fruits', price: 0.99, inventory: 50, imageUrl: 'https://picsum.photos/seed/fruit1/300/300', description: 'Fresh organic bananas.' },
+  { id: '2', name: 'Whole Milk 1L', category: 'Dairy', price: 1.49, inventory: 20, imageUrl: 'https://picsum.photos/seed/dairy1/300/300', description: 'Fresh farm whole milk.' },
+  { id: '3', name: 'Artisan Bread', category: 'Bakery', price: 2.99, inventory: 15, imageUrl: 'https://picsum.photos/seed/bakery1/300/300', description: 'Baked fresh every morning.' },
+  { id: '4', name: 'Baby Spinach', category: 'Vegetables', price: 1.99, inventory: 30, imageUrl: 'https://picsum.photos/seed/veg1/300/300', description: 'Fresh leafy baby spinach.' },
+  { id: '5', name: 'Greek Yogurt', category: 'Dairy', price: 0.89, inventory: 40, imageUrl: 'https://picsum.photos/seed/dairy2/300/300', description: 'Creamy Greek yogurt.' },
+  { id: '6', name: 'Potato Chips', category: 'Snacks', price: 1.29, inventory: 60, imageUrl: 'https://picsum.photos/seed/snack1/300/300', description: 'Classic salted potato chips.' },
+  { id: '7', name: 'Gala Apples', category: 'Fruits', price: 0.79, inventory: 45, imageUrl: 'https://picsum.photos/seed/fruit2/300/300', description: 'Sweet and crunchy gala apples.' },
+  { id: '8', name: 'Fresh Carrots', category: 'Vegetables', price: 1.19, inventory: 35, imageUrl: 'https://picsum.photos/seed/veg2/300/300', description: 'Orange and crunchy fresh carrots.' },
+  { id: '9', name: 'Chocolate Cookies', category: 'Snacks', price: 2.49, inventory: 25, imageUrl: 'https://picsum.photos/seed/snack2/300/300', description: 'Double chocolate chip cookies.' },
 ];
 
 export const useAppStore = create<AppState>((set) => ({

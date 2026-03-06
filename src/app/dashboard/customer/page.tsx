@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +10,6 @@ import {
   ShoppingCart, 
   Package, 
   MapPin, 
-  LogOut, 
   Clock,
   ChevronDown,
   Mic,
@@ -21,10 +19,11 @@ import {
   Repeat,
   LayoutGrid,
   ShoppingBag,
-  Smartphone,
-  Sparkles,
-  Lamp,
-  Baby
+  Apple,
+  Leaf,
+  Milk,
+  Croissant,
+  Cookie
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -33,17 +32,17 @@ import Image from 'next/image';
 
 const CATEGORIES = [
   { name: 'All', icon: ShoppingBag },
-  { name: 'Ramzan', icon: Package },
-  { name: 'Electronics', icon: Smartphone },
-  { name: 'Beauty', icon: Sparkles },
-  { name: 'Decor', icon: Lamp },
-  { name: 'Kids', icon: Baby },
+  { name: 'Vegetables', icon: Leaf },
+  { name: 'Fruits', icon: Apple },
+  { name: 'Dairy', icon: Milk },
+  { name: 'Bakery', icon: Croissant },
+  { name: 'Snacks', icon: Cookie },
 ];
 
 const BANNERS = [
-  { id: '1', src: 'https://picsum.photos/seed/newlaunch/400/500', title: 'NEWLY LAUNCHED' },
-  { id: '2', src: 'https://picsum.photos/seed/ramzan/400/500', title: 'Ramzan Mubarak' },
-  { id: '3', src: 'https://picsum.photos/seed/gifting/400/500', title: 'Gifting Specials' },
+  { id: '1', src: 'https://picsum.photos/seed/freshfarm/400/500', title: 'FRESH FROM FARM' },
+  { id: '2', src: 'https://picsum.photos/seed/morning/400/500', title: 'MORNING ESSENTIALS' },
+  { id: '3', src: 'https://picsum.photos/seed/snacks/400/500', title: 'WEEKEND SNACKS' },
 ];
 
 export default function CustomerDashboard() {
@@ -121,7 +120,7 @@ export default function CustomerDashboard() {
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
           <Input 
-            placeholder='Search "healthy snacks"' 
+            placeholder='Search "fresh milk" or "vegetables"' 
             className="pl-10 pr-10 h-12 bg-white border-slate-200 rounded-xl shadow-sm text-base focus-visible:ring-primary"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -163,7 +162,7 @@ export default function CustomerDashboard() {
                   {banner.title}
                 </span>
                 <Button size="sm" className="w-fit mt-2 h-7 px-3 text-[10px] font-bold bg-white text-black hover:bg-slate-100 rounded-full">
-                  FOR YOU
+                  ORDER NOW
                 </Button>
               </div>
             </div>
@@ -177,24 +176,24 @@ export default function CustomerDashboard() {
             <div className="min-w-[140px] bg-sky-50 rounded-2xl p-4 border border-sky-100 flex flex-col items-center gap-3">
               <div className="flex -space-x-3">
                 <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Package className="h-8 w-8 text-sky-500" />
+                  <Apple className="h-8 w-8 text-sky-500" />
                 </div>
                 <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Package className="h-8 w-8 text-sky-300" />
+                  <Leaf className="h-8 w-8 text-sky-300" />
                 </div>
               </div>
-              <span className="text-xs font-black text-center text-slate-800 leading-tight">Dry Fruits & Cereals</span>
+              <span className="text-xs font-black text-center text-slate-800 leading-tight">Fresh Produce</span>
             </div>
             <div className="min-w-[140px] bg-teal-50 rounded-2xl p-4 border border-teal-100 flex flex-col items-center gap-3">
               <div className="flex -space-x-3">
                 <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Sparkles className="h-8 w-8 text-teal-500" />
+                  <Milk className="h-8 w-8 text-teal-500" />
                 </div>
                 <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Sparkles className="h-8 w-8 text-teal-300" />
+                  <Croissant className="h-8 w-8 text-teal-300" />
                 </div>
               </div>
-              <span className="text-xs font-black text-center text-slate-800 leading-tight">Body & Hair Care</span>
+              <span className="text-xs font-black text-center text-slate-800 leading-tight">Dairy & Bakery</span>
             </div>
           </div>
         </section>
@@ -228,7 +227,6 @@ export default function CustomerDashboard() {
           <span className="text-[10px] font-bold">Categories</span>
         </button>
         
-        {/* Integrated Shopping Cart Menu Button */}
         <Sheet>
           <SheetTrigger asChild>
             <button className="flex flex-col items-center gap-1 text-slate-400 relative">
