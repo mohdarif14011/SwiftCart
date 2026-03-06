@@ -16,7 +16,6 @@ import {
   Wallet,
   User as UserIcon,
   Home as HomeIcon,
-  Repeat,
   LayoutGrid,
   ShoppingBag,
   Apple,
@@ -31,8 +30,6 @@ import {
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 const CATEGORIES = [
@@ -46,9 +43,10 @@ const CATEGORIES = [
 ];
 
 export default function CustomerDashboard() {
-  const { cart, user, products, updateCartQuantity, removeFromCart, addToCart, placeOrder } = useAppStore();
+  const { cart, user, products, favorites, updateCartQuantity, removeFromCart, addToCart, placeOrder } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories'>('home');
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -59,21 +57,28 @@ export default function CustomerDashboard() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
+    let list = products;
+    if (currentView === 'favorites') {
+      list = products.filter(p => favorites.includes(p.id));
+    }
+    
+    return list.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchQuery, activeCategory]);
+  }, [products, searchQuery, activeCategory, currentView, favorites]);
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, typeof products> = {};
-    products.forEach(p => {
+    const listToGroup = currentView === 'favorites' ? products.filter(p => favorites.includes(p.id)) : products;
+    
+    listToGroup.forEach(p => {
       if (!groups[p.category]) groups[p.category] = [];
       groups[p.category].push(p);
     });
     return groups;
-  }, [products]);
+  }, [products, currentView, favorites]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -116,7 +121,7 @@ export default function CustomerDashboard() {
               <Wallet className="h-4 w-4 text-slate-600" />
               <span className="text-xs font-bold text-slate-700">₹0</span>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10" suppressHydrationWarning>
+            <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
               <UserIcon className="h-5 w-5 text-slate-700" />
             </Button>
           </div>
@@ -130,32 +135,49 @@ export default function CustomerDashboard() {
             className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            suppressHydrationWarning
           />
           <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
       </header>
 
       <main className="flex-1">
-        {/* Category Navigation */}
-        <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.name}
-              onClick={() => setActiveCategory(cat.name)}
-              className="flex flex-col items-center gap-2 min-w-[60px]"
-            >
-              <div className={`p-3 rounded-xl transition-all ${activeCategory === cat.name ? 'bg-primary text-white shadow-lg' : 'bg-slate-50 text-slate-600'}`}>
-                <cat.icon className="h-6 w-6" />
-              </div>
-              <span className={`text-[10px] font-bold ${activeCategory === cat.name ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
-            </button>
-          ))}
-        </div>
+        {currentView !== 'favorites' && (
+          <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => {
+                  setActiveCategory(cat.name);
+                  setCurrentView('home');
+                }}
+                className="flex flex-col items-center gap-2 min-w-[60px]"
+              >
+                <div className={`p-3 rounded-xl transition-all ${activeCategory === cat.name && currentView === 'home' ? 'bg-primary text-white shadow-lg' : 'bg-slate-50 text-slate-600'}`}>
+                  <cat.icon className="h-6 w-6" />
+                </div>
+                <span className={`text-[10px] font-bold ${activeCategory === cat.name && currentView === 'home' ? 'text-slate-900' : 'text-slate-500'}`}>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content Section */}
         <div className="px-4 py-4 space-y-8">
-          {activeCategory === 'All' ? (
+          {currentView === 'favorites' && (
+            <div className="mb-4">
+              <h2 className="text-2xl font-black text-slate-900">My Favorites</h2>
+              <p className="text-sm text-slate-500">Your handpicked groceries</p>
+              {favorites.length === 0 && (
+                <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
+                  <Heart className="h-16 w-16 mb-4 opacity-10" />
+                  <p className="font-bold">No favorites yet</p>
+                  <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(activeCategory === 'All' || currentView === 'favorites') && Object.keys(groupedProducts).length > 0 ? (
             Object.entries(groupedProducts).map(([category, items]) => (
               <section key={category} className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -186,15 +208,24 @@ export default function CustomerDashboard() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
-        <button className="flex flex-col items-center gap-1 text-primary">
+        <button 
+          onClick={() => { setCurrentView('home'); setActiveCategory('All'); }}
+          className={`flex flex-col items-center gap-1 ${currentView === 'home' ? 'text-primary' : 'text-slate-400'}`}
+        >
           <HomeIcon className="h-6 w-6" />
           <span className="text-[10px] font-bold">Home</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
-          <Repeat className="h-6 w-6" />
-          <span className="text-[10px] font-bold">Order Again</span>
+        <button 
+          onClick={() => setCurrentView('favorites')}
+          className={`flex flex-col items-center gap-1 ${currentView === 'favorites' ? 'text-primary' : 'text-slate-400'}`}
+        >
+          <Heart className={`h-6 w-6 ${currentView === 'favorites' ? 'fill-primary' : ''}`} />
+          <span className="text-[10px] font-bold">Favorites</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
+        <button 
+          onClick={() => { setCurrentView('categories'); setActiveCategory('All'); }}
+          className={`flex flex-col items-center gap-1 ${currentView === 'categories' ? 'text-primary' : 'text-slate-400'}`}
+        >
           <LayoutGrid className="h-6 w-6" />
           <span className="text-[10px] font-bold">Categories</span>
         </button>
@@ -284,7 +315,7 @@ export default function CustomerDashboard() {
                       <span className="text-primary">₹{cartTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout} suppressHydrationWarning>
+                  <Button className="w-full h-14 text-lg font-black rounded-2xl shadow-lg" onClick={handleCheckout}>
                     Place Order
                   </Button>
                 </div>
@@ -298,8 +329,9 @@ export default function CustomerDashboard() {
 }
 
 function ProductCard({ product, isListView }: { product: any, isListView: boolean }) {
-  const { cart, addToCart, updateCartQuantity } = useAppStore();
+  const { cart, favorites, addToCart, updateCartQuantity, toggleFavorite } = useAppStore();
   const cartItem = cart.find(i => i.productId === product.id);
+  const isFavorite = favorites.includes(product.id);
 
   return (
     <div className={`flex flex-col transition-all group ${isListView ? 'w-full' : 'min-w-[150px] max-w-[150px]'}`}>
@@ -310,8 +342,11 @@ function ProductCard({ product, isListView }: { product: any, isListView: boolea
           alt={product.name} 
           className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-300"
         />
-        <button className="absolute top-2 right-2 text-slate-300 hover:text-destructive transition-colors">
-          <Heart className="h-5 w-5" />
+        <button 
+          onClick={() => toggleFavorite(product.id)}
+          className={`absolute top-2 right-2 transition-colors ${isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400'}`}
+        >
+          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
         </button>
         
         {/* Quick Add Button Overlay */}

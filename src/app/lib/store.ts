@@ -6,6 +6,7 @@ interface AppState {
   products: Product[];
   cart: CartItem[];
   orders: Order[];
+  favorites: string[];
   setUser: (user: User | null) => void;
   setProducts: (products: Product[]) => void;
   addToCart: (product: Product) => void;
@@ -14,6 +15,7 @@ interface AppState {
   clearCart: () => void;
   placeOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  toggleFavorite: (productId: string) => void;
 }
 
 // Minimal products for initial catalog - Strictly Grocery focused
@@ -37,6 +39,7 @@ export const useAppStore = create<AppState>((set) => ({
   products: INITIAL_PRODUCTS,
   cart: [],
   orders: [],
+  favorites: [],
   setUser: (user) => set({ user }),
   setProducts: (products) => set({ products }),
   addToCart: (product) => set((state) => {
@@ -63,5 +66,10 @@ export const useAppStore = create<AppState>((set) => ({
   })),
   updateOrderStatus: (orderId, status) => set((state) => ({
     orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o)
+  })),
+  toggleFavorite: (productId) => set((state) => ({
+    favorites: state.favorites.includes(productId)
+      ? state.favorites.filter(id => id !== productId)
+      : [...state.favorites, productId]
   })),
 }));
