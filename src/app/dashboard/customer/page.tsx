@@ -142,35 +142,6 @@ export default function CustomerDashboard() {
           ))}
         </div>
 
-        {/* Section: Frequently Bought */}
-        <section className="px-4 py-4">
-          <h2 className="text-xl font-black text-slate-900 mb-4">Frequently bought</h2>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
-            <div className="min-w-[140px] bg-sky-50 rounded-2xl p-4 border border-sky-100 flex flex-col items-center gap-3">
-              <div className="flex -space-x-3">
-                <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Apple className="h-8 w-8 text-sky-500" />
-                </div>
-                <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Leaf className="h-8 w-8 text-sky-300" />
-                </div>
-              </div>
-              <span className="text-xs font-black text-center text-slate-800 leading-tight">Fresh Produce</span>
-            </div>
-            <div className="min-w-[140px] bg-teal-50 rounded-2xl p-4 border border-teal-100 flex flex-col items-center gap-3">
-              <div className="flex -space-x-3">
-                <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Milk className="h-8 w-8 text-teal-500" />
-                </div>
-                <div className="h-12 w-12 rounded-lg bg-white shadow-sm p-2 flex items-center justify-center">
-                  <Croissant className="h-8 w-8 text-teal-300" />
-                </div>
-              </div>
-              <span className="text-xs font-black text-center text-slate-800 leading-tight">Dairy & Bakery</span>
-            </div>
-          </div>
-        </section>
-
         {/* Product Grid */}
         <section className="px-4 py-6">
           <div className="flex items-center justify-between mb-4">
