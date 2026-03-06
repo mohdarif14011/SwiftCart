@@ -37,7 +37,9 @@ import {
   Navigation,
   Loader2,
   Phone,
-  Building2
+  Building2,
+  Box,
+  Truck
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -74,7 +76,7 @@ const CATEGORIES = [
 
 const STATUS_LABELS: Record<string, string> = {
   CONFIRMED: 'Order Confirmed',
-  PREPARING: 'Ordered being prepared',
+  PREPARING: 'Order being prepared',
   PICKED_UP: 'Picked up',
   OUT_FOR_DELIVERY: 'Out for delivery',
   DELIVERED: 'Delivered',
@@ -88,10 +90,11 @@ export default function CustomerDashboard() {
   const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
-  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success' | 'onboarding-map' | 'onboarding-details'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success' | 'onboarding-map' | 'onboarding-details' | 'orders'>('home');
   const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
   // Onboarding/Profile state
   const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -135,7 +138,6 @@ export default function CustomerDashboard() {
         (error) => {
           console.error(error);
           setLocating(false);
-          // Fallback to coordinates
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
           toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default area pin." });
         }
@@ -214,6 +216,7 @@ export default function CustomerDashboard() {
   }, [products]);
 
   const latestOrder = orders[0];
+  const selectedOrder = useMemo(() => orders.find(o => o.id === selectedOrderId) || latestOrder, [orders, selectedOrderId, latestOrder]);
 
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
@@ -227,6 +230,7 @@ export default function CustomerDashboard() {
       address: profile?.address || 'Your saved address',
     };
     placeOrder(newOrder);
+    setSelectedOrderId(newOrder.id);
     setCurrentView('order-success');
   };
 
@@ -387,10 +391,10 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Main App Views (Home, Categories, Favorites, Cart) */}
-      {['home', 'categories', 'favorites', 'cart', 'order-success'].includes(currentView) && profile && (
+      {/* Main App Views */}
+      {['home', 'categories', 'favorites', 'cart', 'order-success', 'orders'].includes(currentView) && profile && (
         <>
-          {/* Dashboard Header - Used for Home and Category Views */}
+          {/* Header */}
           {(currentView === 'home' || currentView === 'categories') && (
             <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
               <div className="flex items-center justify-between mb-2">
@@ -429,16 +433,13 @@ export default function CustomerDashboard() {
                         {user?.name || 'My Profile'}
                       </div>
                       <Separator className="my-1" />
-                      <DropdownMenuItem 
-                        onClick={handleEditLocation} 
-                        className="font-bold cursor-pointer"
-                      >
+                      <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
                         <MapPin className="h-4 w-4 mr-2" /> Edit Location
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={handleLogout} 
-                        className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10"
-                      >
+                      <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
+                        <Package className="h-4 w-4 mr-2" /> My Orders
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
                         <LogOut className="h-4 w-4 mr-2" /> Logout
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -461,7 +462,7 @@ export default function CustomerDashboard() {
             </header>
           )}
 
-          {/* Home View Content */}
+          {/* Home View */}
           {currentView === 'home' && (
             <main className="flex-1 overflow-x-hidden">
               <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
@@ -505,7 +506,7 @@ export default function CustomerDashboard() {
             </main>
           )}
 
-          {/* Categories View Content */}
+          {/* Categories View */}
           {currentView === 'categories' && (
             <div className="flex-1 flex overflow-hidden">
               <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
@@ -538,20 +539,6 @@ export default function CustomerDashboard() {
                 })}
               </aside>
               <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                        Sort <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="rounded-xl">
-                      <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">Relevance</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">Price: Low to High</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">Price: High to Low</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                   {filteredProducts.map(product => (
                     <ProductCard key={product.id} product={product} layout="grid" />
@@ -561,7 +548,7 @@ export default function CustomerDashboard() {
             </div>
           )}
 
-          {/* Favorites View Content */}
+          {/* Favorites View */}
           {currentView === 'favorites' && (
             <>
               <header className="bg-white px-4 py-6 border-b flex items-center gap-4">
@@ -591,7 +578,7 @@ export default function CustomerDashboard() {
             </>
           )}
 
-          {/* Cart View Content */}
+          {/* Cart View */}
           {currentView === 'cart' && (
             <div className="flex flex-col h-screen overflow-hidden">
               <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
@@ -612,7 +599,7 @@ export default function CustomerDashboard() {
                     <Button variant="outline" className="mt-6 rounded-xl font-black" onClick={() => setCurrentView('home')}>Start Shopping</Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-20">
                     <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
                       {cart.map((item) => (
                         <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
@@ -659,16 +646,6 @@ export default function CustomerDashboard() {
                     </div>
 
                     <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-slate-100 rounded-xl"><Wallet className="h-5 w-5 text-slate-600" /></div>
-                        <div className="flex-1">
-                          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Method</p>
-                          <p className="text-sm font-bold text-slate-900 mt-1">Cash on Delivery / UPI on delivery</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mb-20">
                       <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
@@ -714,7 +691,129 @@ export default function CustomerDashboard() {
             </div>
           )}
 
-          {/* Order Success View Content */}
+          {/* Orders Tracking View */}
+          {currentView === 'orders' && (
+            <div className="flex flex-col h-screen bg-slate-50 overflow-y-auto no-scrollbar pb-24">
+              <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0 sticky top-0 z-10">
+                <button onClick={() => setCurrentView('home')}>
+                  <ArrowLeft className="h-6 w-6 text-slate-900" />
+                </button>
+                <h2 className="text-2xl font-black text-slate-900">Track your Order</h2>
+              </header>
+
+              <main className="p-4 space-y-4">
+                {orders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <Package className="h-20 w-20 mb-4 opacity-10" />
+                    <p className="font-bold">No orders yet</p>
+                    <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
+                  </div>
+                ) : (
+                  <>
+                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Address</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1">
+                        <p className="text-sm font-bold text-slate-900">{selectedOrder.address}</p>
+                        {profile.nearby && <p className="text-xs text-slate-500 font-medium">Near {profile.nearby}, {profile.address.split(',').pop()?.trim()}</p>}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
+                      <CardContent className="p-6">
+                        <h3 className="text-base font-black text-slate-900 mb-6">
+                          {selectedOrder.status === 'DELIVERED' ? 'Order delivered successfully' : 'Order picked up before time by Swift Drones & Co.'}
+                        </h3>
+
+                        <div className="relative space-y-8 pl-12">
+                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-100" />
+                          
+                          {/* Timeline Steps */}
+                          <div className="relative">
+                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                              ['CONFIRMED', 'PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
+                            )}>
+                              <MapPin className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Order Placed</p>
+                              <p className="text-xs text-slate-400 font-medium">
+                                {selectedOrder.items.map(i => `${i.quantity}x${i.name}`).join(', ')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="relative">
+                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                              ['PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
+                            )}>
+                              <Box className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Packed in SwiftCart Warehouse</p>
+                              <p className="text-xs text-slate-400 font-medium">Items are carefully packed</p>
+                            </div>
+                          </div>
+
+                          <div className="relative">
+                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                              ['PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
+                            )}>
+                              <Truck className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Picked up by Swift Drones & Co.</p>
+                              <p className="text-xs text-slate-400 font-medium">Out for delivery</p>
+                            </div>
+                          </div>
+
+                          <div className="relative">
+                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                              selectedOrder.status === 'DELIVERED' ? "bg-green-500 text-white" : "bg-white text-slate-300 border-slate-100"
+                            )}>
+                              <HomeIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className={cn("text-sm font-black", selectedOrder.status === 'DELIVERED' ? "text-slate-900" : "text-slate-300")}>Order Delivered</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="space-y-4 pt-4">
+                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">Order History</h3>
+                      {orders.map(o => (
+                        <button 
+                          key={o.id} 
+                          onClick={() => setSelectedOrderId(o.id)}
+                          className={cn("w-full bg-white p-4 rounded-3xl flex items-center justify-between border transition-all", 
+                            selectedOrderId === o.id ? "border-primary ring-1 ring-primary/20" : "border-slate-100"
+                          )}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 bg-slate-50 rounded-2xl flex items-center justify-center">
+                              <Package className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-black text-slate-900">ORD-{o.id}</p>
+                              <p className="text-[10px] text-slate-500 font-bold">{new Date(o.createdAt).toLocaleDateString()} • ₹{o.total.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-tighter">
+                            {STATUS_LABELS[o.status] || o.status}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </main>
+            </div>
+          )}
+
+          {/* Order Success */}
           {currentView === 'order-success' && latestOrder && (
             <div className="flex flex-col h-screen bg-white">
               <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
@@ -738,22 +837,21 @@ export default function CustomerDashboard() {
                       {STATUS_LABELS[latestOrder.status] || latestOrder.status.replace(/_/g, ' ')}
                     </div>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Total Bill</span>
-                    <span className="font-black text-slate-900">₹{latestOrder.total.toFixed(2)}</span>
-                  </div>
                 </Card>
 
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Please have UPI or Cash ready</p>
-                
                 <div className="w-full space-y-3 pt-6">
                   <Button 
-                    variant="outline" 
-                    className="w-full h-12 rounded-xl font-black border-slate-200"
+                    className="w-full h-14 rounded-2xl font-black bg-primary"
+                    onClick={() => setCurrentView('orders')}
+                  >
+                    Track My Order <ChevronRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full h-12 rounded-xl font-black text-slate-400"
                     onClick={() => setCurrentView('home')}
                   >
-                    Back to Home
+                    Back to Shopping
                   </Button>
                 </div>
               </main>
@@ -761,7 +859,7 @@ export default function CustomerDashboard() {
           )}
 
           {/* Bottom Navigation */}
-          {['home', 'favorites', 'categories', 'cart'].includes(currentView) && (
+          {['home', 'favorites', 'categories', 'cart', 'orders'].includes(currentView) && (
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
               <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
                 <HomeIcon className="h-6 w-6" />
@@ -774,6 +872,10 @@ export default function CustomerDashboard() {
               <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
                 <LayoutGrid className="h-6 w-6" />
                 <span className="text-[10px] font-bold">Categories</span>
+              </button>
+              <button onClick={() => setCurrentView('orders')} className={cn("flex flex-col items-center gap-1", currentView === 'orders' ? 'text-green-600' : 'text-slate-400')}>
+                <Package className="h-6 w-6" />
+                <span className="text-[10px] font-bold">Orders</span>
               </button>
               <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
                 <div className="relative">
