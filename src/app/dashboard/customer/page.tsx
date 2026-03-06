@@ -93,11 +93,10 @@ export default function CustomerDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
-  // Onboarding state
+  // Onboarding/Profile state
   const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [detectedAddress, setDetectedAddress] = useState<string>('');
   const [locating, setLocating] = useState(false);
-  const [onboardingForm, setOnboardingForm] = useState({ phone: '', nearby: '' });
+  const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '', nearby: '' });
   const [savingProfile, setSavingProfile] = useState(false);
 
   const router = useRouter();
@@ -114,11 +113,12 @@ export default function CustomerDashboard() {
   }, []);
 
   useEffect(() => {
-    if (isClient && !isProfileLoading && !profile && user) {
+    // If we're on the dashboard and profile doesn't exist, force onboarding
+    if (isClient && !isProfileLoading && !profile && user && currentView === 'home') {
       setCurrentView('onboarding-map');
       handleAutoLocate();
     }
-  }, [isClient, isProfileLoading, profile, user]);
+  }, [isClient, isProfileLoading, profile, user, currentView]);
 
   const handleAutoLocate = () => {
     setLocating(true);
@@ -130,14 +130,14 @@ export default function CustomerDashboard() {
             lng: position.coords.longitude
           });
           setLocating(false);
-          toast({ title: "Location detected", description: "Your current position has been pinpointed." });
+          toast({ title: "Location detected", description: "Your pin has been placed on the map." });
         },
         (error) => {
           console.error(error);
           setLocating(false);
           // Fallback to coordinates
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
-          toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default location." });
+          toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default area pin." });
         }
       );
     } else {
@@ -148,12 +148,12 @@ export default function CustomerDashboard() {
 
   const handleOnboardingComplete = async () => {
     if (!user?.id) return;
-    if (!onboardingForm.phone) {
-      toast({ variant: "destructive", title: "Required fields", description: "Please provide your phone number." });
+    if (!onboardingForm.phone.trim()) {
+      toast({ variant: "destructive", title: "Missing Phone", description: "Please provide your mobile number." });
       return;
     }
-    if (!detectedAddress) {
-      toast({ variant: "destructive", title: "Required fields", description: "Please provide your delivery address." });
+    if (!onboardingForm.address.trim()) {
+      toast({ variant: "destructive", title: "Missing Address", description: "Please provide your street address." });
       return;
     }
 
@@ -169,13 +169,13 @@ export default function CustomerDashboard() {
         lastName,
         email: user.email,
         phone: onboardingForm.phone,
-        address: detectedAddress,
+        address: onboardingForm.address,
         nearby: onboardingForm.nearby,
         location: gpsLocation,
-        createdAt: new Date().toISOString()
+        updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      toast({ title: "Profile updated", description: "Your details have been saved." });
+      toast({ title: "Profile Saved", description: "Your delivery details are set." });
       setCurrentView('home');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -224,7 +224,7 @@ export default function CustomerDashboard() {
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: profile?.address || detectedAddress || 'Your saved address',
+      address: profile?.address || 'Your saved address',
     };
     placeOrder(newOrder);
     setCurrentView('order-success');
@@ -248,6 +248,18 @@ export default function CustomerDashboard() {
     }
   };
 
+  const handleEditLocation = () => {
+    setOnboardingForm({
+      phone: profile?.phone || '',
+      address: profile?.address || '',
+      nearby: profile?.nearby || ''
+    });
+    if (profile?.location) {
+      setGpsLocation(profile.location);
+    }
+    setCurrentView('onboarding-map');
+  };
+
   if (!isClient) return null;
 
   return (
@@ -256,8 +268,8 @@ export default function CustomerDashboard() {
       {currentView === 'onboarding-map' && (
         <div className="flex flex-col h-screen bg-white">
           <div className="p-6 space-y-2">
-            <h1 className="text-3xl font-black text-slate-900">Delivery Location</h1>
-            <p className="text-slate-500 font-medium">Pinpoint your house for precise delivery.</p>
+            <h1 className="text-3xl font-black text-slate-900">Pin Your House</h1>
+            <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
           </div>
           
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
@@ -268,8 +280,8 @@ export default function CustomerDashboard() {
               loading="lazy"
               allowFullScreen
               referrerPolicy="no-referrer-when-downgrade"
-              src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=16&output=embed`}
-              className="w-full h-full opacity-70 grayscale"
+              src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=18&output=embed`}
+              className="w-full h-full grayscale opacity-70"
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative">
@@ -288,11 +300,11 @@ export default function CustomerDashboard() {
               {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
             </Button>
             
-            {profile && (
+            {(profile || currentView === 'onboarding-map') && (
               <Button 
                 variant="ghost" 
                 className="absolute top-6 left-6 rounded-full h-10 w-10 bg-white/80 backdrop-blur-sm shadow-md p-0"
-                onClick={() => setCurrentView('home')}
+                onClick={() => profile ? setCurrentView('home') : router.push('/')}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -302,16 +314,10 @@ export default function CustomerDashboard() {
           <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
             <Button 
               className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
-              onClick={() => {
-                setOnboardingForm({
-                  phone: profile?.phone || '',
-                  nearby: profile?.nearby || ''
-                });
-                setCurrentView('onboarding-details');
-              }}
+              onClick={() => setCurrentView('onboarding-details')}
               disabled={!gpsLocation}
             >
-              Confirm Location <ChevronRight className="ml-2 h-5 w-5" />
+              Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -324,20 +330,20 @@ export default function CustomerDashboard() {
             <button onClick={() => setCurrentView('onboarding-map')} className="p-1 -ml-1">
               <ArrowLeft className="h-6 w-6 text-slate-900" />
             </button>
-            <h1 className="text-3xl font-black text-slate-900">Few more details</h1>
-            <p className="text-slate-500 font-medium">Help us reach your doorstep faster.</p>
+            <h1 className="text-3xl font-black text-slate-900">Delivery Info</h1>
+            <p className="text-slate-500 font-medium">Finalize your profile details.</p>
           </div>
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</label>
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Street Address</label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                  placeholder="Street name, House No, Area" 
+                  placeholder="Street name, House No, Block" 
                   className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
-                  value={detectedAddress}
-                  onChange={(e) => setDetectedAddress(e.target.value)}
+                  value={onboardingForm.address}
+                  onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
                 />
               </div>
             </div>
@@ -356,11 +362,11 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Optional)</label>
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Landmarks)</label>
               <div className="relative">
                 <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input 
-                  placeholder="e.g. Near Metro Station, Opp. Park" 
+                  placeholder="Opposite Park, Next to Gym etc." 
                   className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
                   value={onboardingForm.nearby}
                   onChange={(e) => setOnboardingForm({...onboardingForm, nearby: e.target.value})}
@@ -376,440 +382,438 @@ export default function CustomerDashboard() {
             onClick={handleOnboardingComplete}
             disabled={savingProfile}
           >
-            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : (profile ? "Update Profile" : "Complete Profile")}
+            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : (profile ? "Update Profile" : "Create Profile")}
           </Button>
         </div>
       )}
 
-      {/* Home View */}
-      {currentView === 'home' && (
+      {/* Main App Views (Home, Categories, Favorites, Cart) */}
+      {['home', 'categories', 'favorites', 'cart', 'order-success'].includes(currentView) && profile && (
         <>
-          <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-black uppercase tracking-tight text-slate-400">SwiftCart in</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-3xl font-black text-slate-900">9 minutes</span>
-                  <div className="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border border-amber-200">
-                    <Clock className="h-3 w-3" /> 24/7
+          {/* Dashboard Header - Used for Home and Category Views */}
+          {(currentView === 'home' || currentView === 'categories') && (
+            <header className="bg-white px-4 pt-4 pb-2 sticky top-0 z-50 shadow-sm border-b border-slate-50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-black uppercase tracking-tight text-slate-400">Delivering in</span>
                   </div>
-                </div>
-                <button 
-                  onClick={() => setCurrentView('onboarding-map')}
-                  className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]"
-                >
-                  {profile?.address || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-slate-100 p-2 rounded-full flex items-center gap-1">
-                  <Wallet className="h-4 w-4 text-slate-600" />
-                  <span className="text-xs font-bold text-slate-700">₹0</span>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
-                      <UserIcon className="h-5 w-5 text-slate-700" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-xl w-48">
-                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      {user?.name || 'Account'}
+                  <div className="flex items-center gap-1">
+                    <span className="text-3xl font-black text-slate-900">9 mins</span>
+                    <div className="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border border-amber-200">
+                      <Clock className="h-3 w-3" /> 24/7
                     </div>
-                    <Separator className="my-1" />
-                    <DropdownMenuItem 
-                      onClick={handleLogout} 
-                      className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" /> Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </div>
+                  <button 
+                    onClick={handleEditLocation}
+                    className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px] hover:text-primary transition-colors"
+                  >
+                    <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                    {profile.address || 'Set delivery address'} 
+                    <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="bg-slate-100 p-2 rounded-full flex items-center gap-1">
+                    <Wallet className="h-4 w-4 text-slate-600" />
+                    <span className="text-xs font-bold text-slate-700">₹0</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10">
+                        <UserIcon className="h-5 w-5 text-slate-700" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl w-48">
+                      <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {user?.name || 'My Profile'}
+                      </div>
+                      <Separator className="my-1" />
+                      <DropdownMenuItem 
+                        onClick={handleEditLocation} 
+                        className="font-bold cursor-pointer"
+                      >
+                        <MapPin className="h-4 w-4 mr-2" /> Edit Location
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={handleLogout} 
+                        className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" /> Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </div>
 
-            <div className="relative mt-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input 
-                placeholder='Search "fresh milk" or "vegetables"' 
-                className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            </div>
-          </header>
+              {currentView === 'home' && (
+                <div className="relative mt-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input 
+                    placeholder='Search "milk", "bread" or "fruit"' 
+                    className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Mic className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                </div>
+              )}
+            </header>
+          )}
 
-          <main className="flex-1 overflow-x-hidden">
-            <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.name}
-                  onClick={() => {
-                    setActiveCategory(cat.name);
-                    setCurrentView('categories');
-                  }}
-                  className="flex flex-col items-center gap-2 min-w-[60px]"
-                >
-                  <div className="p-3 rounded-xl transition-all bg-slate-50 text-slate-600">
-                    <cat.icon className="h-6 w-6" />
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-500">{cat.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="px-4 py-4 space-y-8">
-              {Object.entries(groupedProducts).map(([category, items]) => (
-                <section key={category} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-black text-slate-900">{category}</h2>
-                    <button 
-                      onClick={() => { setActiveCategory(category); setCurrentView('categories'); }}
-                      className="text-primary text-sm font-bold hover:underline"
-                    >
-                      View all
-                    </button>
-                  </div>
-                  <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                    {items.map(product => (
-                      <ProductCard key={product.id} product={product} layout="horizontal" />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </main>
-        </>
-      )}
-
-      {/* Categories View */}
-      {currentView === 'categories' && (
-        <div className="flex flex-col h-screen overflow-hidden">
-          <header className="bg-white px-4 py-3 border-b flex items-center justify-between sticky top-0 z-50 gap-4">
-            <div className="flex items-center overflow-hidden">
-              <button onClick={() => setCurrentView('home')} className="p-1 mr-3 flex-shrink-0">
-                <ArrowLeft className="h-6 w-6 text-slate-900" />
-              </button>
-              <div className="flex flex-col overflow-hidden min-w-0">
-                <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
-                <button 
-                  onClick={() => setCurrentView('onboarding-map')}
-                  className="flex items-center text-[10px] font-bold"
-                >
-                  <span className="text-slate-400 uppercase tracking-tighter">Delivering to</span>
-                  <span className="text-slate-500 ml-1 truncate max-w-[120px]">{profile?.address || 'Detecting...'}</span> 
-                  <ChevronDown className="h-3 w-3 ml-0.5 text-slate-400 flex-shrink-0" />
-                </button>
-              </div>
-            </div>
-            <div className="relative flex-1 max-w-[200px] sm:max-w-md ml-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input 
-                placeholder='Search' 
-                className="pl-10 pr-10 h-10 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </header>
-
-          <div className="flex-1 flex overflow-hidden">
-            <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
-              {CATEGORIES.map((cat) => {
-                const isActive = activeCategory === cat.name;
-                return (
+          {/* Home View Content */}
+          {currentView === 'home' && (
+            <main className="flex-1 overflow-x-hidden">
+              <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white">
+                {CATEGORIES.map((cat) => (
                   <button
                     key={cat.name}
-                    onClick={() => setActiveCategory(cat.name)}
-                    className={cn(
-                      "relative flex flex-col items-center py-4 px-2 text-center transition-all",
-                      isActive ? "bg-white" : "bg-transparent"
-                    )}
+                    onClick={() => {
+                      setActiveCategory(cat.name);
+                      setCurrentView('categories');
+                    }}
+                    className="flex flex-col items-center gap-2 min-w-[60px]"
                   >
-                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r-full" />}
-                    <div className={cn(
-                      "w-12 h-12 rounded-full overflow-hidden mb-1 flex items-center justify-center bg-white border-2",
-                      isActive ? "border-green-600" : "border-slate-100"
-                    )}>
-                      <cat.icon className={cn("h-6 w-6", isActive ? "text-green-600" : "text-slate-400")} />
+                    <div className="p-3 rounded-xl transition-all bg-slate-50 text-slate-600">
+                      <cat.icon className="h-6 w-6" />
                     </div>
-                    <span className={cn(
-                      "text-[10px] font-bold leading-tight",
-                      isActive ? "text-slate-900" : "text-slate-500"
-                    )}>
-                      {cat.name}
-                    </span>
+                    <span className="text-[10px] font-bold text-slate-500">{cat.name}</span>
                   </button>
-                )
-              })}
-            </aside>
-            <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
-                      Sort <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="rounded-xl">
-                    <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">Relevance</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">Price: Low to High</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">Price: High to Low</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                {filteredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} layout="grid" />
+
+              <div className="px-4 py-4 space-y-8">
+                {Object.entries(groupedProducts).map(([category, items]) => (
+                  <section key={category} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-black text-slate-900">{category}</h2>
+                      <button 
+                        onClick={() => { setActiveCategory(category); setCurrentView('categories'); }}
+                        className="text-primary text-sm font-bold hover:underline"
+                      >
+                        View all
+                      </button>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                      {items.map(product => (
+                        <ProductCard key={product.id} product={product} layout="horizontal" />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </main>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Favorites View */}
-      {currentView === 'favorites' && (
-        <>
-          <header className="bg-white px-4 py-6 border-b flex items-center gap-4">
-            <button onClick={() => setCurrentView('home')}>
-              <ArrowLeft className="h-6 w-6 text-slate-900" />
-            </button>
-            <div>
-              <h2 className="text-2xl font-black text-slate-900">Favorites</h2>
-              <p className="text-xs text-slate-500 font-bold">Your handpicked groceries</p>
+          {/* Categories View Content */}
+          {currentView === 'categories' && (
+            <div className="flex-1 flex overflow-hidden">
+              <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
+                {CATEGORIES.map((cat) => {
+                  const isActive = activeCategory === cat.name;
+                  return (
+                    <button
+                      key={cat.name}
+                      onClick={() => setActiveCategory(cat.name)}
+                      className={cn(
+                        "relative flex flex-col items-center py-4 px-2 text-center transition-all",
+                        isActive ? "bg-white" : "bg-transparent"
+                      )}
+                    >
+                      {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r-full" />}
+                      <div className={cn(
+                        "w-12 h-12 rounded-full overflow-hidden mb-1 flex items-center justify-center bg-white border-2",
+                        isActive ? "border-green-600" : "border-slate-100"
+                      )}>
+                        <cat.icon className={cn("h-6 w-6", isActive ? "text-green-600" : "text-slate-400")} />
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-bold leading-tight",
+                        isActive ? "text-slate-900" : "text-slate-500"
+                      )}>
+                        {cat.name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </aside>
+              <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-xl border-slate-200 text-xs gap-1 font-bold">
+                        Sort <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="rounded-xl">
+                      <DropdownMenuItem onClick={() => setSortBy('none')} className="text-xs font-bold">Relevance</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy('low-to-high')} className="text-xs font-bold">Price: Low to High</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy('high-to-low')} className="text-xs font-bold">Price: High to Low</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                  {filteredProducts.map(product => (
+                    <ProductCard key={product.id} product={product} layout="grid" />
+                  ))}
+                </div>
+              </main>
             </div>
-          </header>
-          <main className="flex-1 p-4 overflow-y-auto no-scrollbar">
-            {favoritesProducts.length === 0 ? (
-              <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-                <Heart className="h-16 w-16 mb-4 opacity-10" />
-                <p className="font-bold">No favorites yet</p>
-                <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {favoritesProducts.map(product => (
-                  <ProductCard key={product.id} product={product} layout="grid" />
-                ))}
-              </div>
-            )}
-          </main>
+          )}
+
+          {/* Favorites View Content */}
+          {currentView === 'favorites' && (
+            <>
+              <header className="bg-white px-4 py-6 border-b flex items-center gap-4">
+                <button onClick={() => setCurrentView('home')}>
+                  <ArrowLeft className="h-6 w-6 text-slate-900" />
+                </button>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900">Favorites</h2>
+                  <p className="text-xs text-slate-500 font-bold">Your handpicked groceries</p>
+                </div>
+              </header>
+              <main className="flex-1 p-4 overflow-y-auto no-scrollbar">
+                {favoritesProducts.length === 0 ? (
+                  <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
+                    <Heart className="h-16 w-16 mb-4 opacity-10" />
+                    <p className="font-bold">No favorites yet</p>
+                    <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {favoritesProducts.map(product => (
+                      <ProductCard key={product.id} product={product} layout="grid" />
+                    ))}
+                  </div>
+                )}
+              </main>
+            </>
+          )}
+
+          {/* Cart View Content */}
+          {currentView === 'cart' && (
+            <div className="flex flex-col h-screen overflow-hidden">
+              <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
+                <button onClick={() => setCurrentView('home')}>
+                  <ArrowLeft className="h-6 w-6 text-slate-900" />
+                </button>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
+                  <p className="text-xs text-slate-500 font-bold">{cart.length} items</p>
+                </div>
+              </header>
+
+              <main className="flex-1 overflow-y-auto p-4 no-scrollbar bg-slate-50">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-32 text-slate-400">
+                    <ShoppingBag className="h-20 w-20 mb-6 opacity-20" />
+                    <p className="text-lg font-black text-slate-600">Your basket is empty</p>
+                    <Button variant="outline" className="mt-6 rounded-xl font-black" onClick={() => setCurrentView('home')}>Start Shopping</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
+                      {cart.map((item) => (
+                        <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
+                          <div className="h-20 w-20 relative rounded-2xl overflow-hidden bg-white border border-slate-100 p-2 flex-shrink-0">
+                            <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+                          </div>
+                          <div className="flex-1 flex flex-col justify-between min-w-0">
+                            <div className="pr-8 relative">
+                              <h4 className="font-black text-sm text-slate-900 line-clamp-1">{item.name}</h4>
+                              <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
+                              <button className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors" onClick={() => removeFromCart(item.productId)}>
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden h-8 shadow-sm">
+                                <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
+                                  <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="px-1 text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                                <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}>
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
+                            <button onClick={handleEditLocation} className="text-[10px] font-black text-primary uppercase">Edit</button>
+                          </div>
+                          <p className="text-sm font-bold text-slate-900 mt-1">{profile.address}</p>
+                          {profile.nearby && <p className="text-xs text-slate-500 font-medium">Landmark: {profile.nearby}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-slate-100 rounded-xl"><Wallet className="h-5 w-5 text-slate-600" /></div>
+                        <div className="flex-1">
+                          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Method</p>
+                          <p className="text-sm font-bold text-slate-900 mt-1">Cash on Delivery / UPI on delivery</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mb-20">
+                      <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500 font-medium">Item Total</span>
+                          <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500 font-medium">Delivery Fee</span>
+                          <span className="text-green-600 font-bold">FREE</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500 font-medium">Handling Charge</span>
+                          <span className="font-bold">₹2</span>
+                        </div>
+                        <Separator className="bg-slate-100" />
+                        <div className="flex justify-between text-xl font-black">
+                          <span className="text-slate-900">Grand Total</span>
+                          <span className="text-slate-900">₹{(cartTotal + 2).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </main>
+
+              {cart.length > 0 && (
+                <div className="bg-white border-t p-4 pb-12 flex-shrink-0 z-50 shadow-2xl">
+                  <Button 
+                    className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700 flex items-center justify-between px-6"
+                    onClick={() => setIsConfirmOpen(true)}
+                  >
+                    <div className="text-left">
+                      <p className="text-[10px] opacity-80 uppercase tracking-widest leading-none">Total</p>
+                      <p className="text-xl leading-none mt-1">₹{(cartTotal + 2).toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>Place Order</span>
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Order Success View Content */}
+          {currentView === 'order-success' && latestOrder && (
+            <div className="flex flex-col h-screen bg-white">
+              <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
+                  <CheckCircle2 className="h-12 w-12 text-green-600" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-black text-slate-900">Order Confirmed!</h1>
+                  <p className="text-slate-500 font-medium">Arrival at {profile.address} in 9 mins.</p>
+                </div>
+
+                <Card className="w-full max-w-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Order ID</span>
+                    <span className="font-black text-slate-900">#{latestOrder.id}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Current Status</span>
+                    <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-2">
+                      <Clock className="h-3 w-3" />
+                      {STATUS_LABELS[latestOrder.status] || latestOrder.status.replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Total Bill</span>
+                    <span className="font-black text-slate-900">₹{latestOrder.total.toFixed(2)}</span>
+                  </div>
+                </Card>
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Please have UPI or Cash ready</p>
+                
+                <div className="w-full space-y-3 pt-6">
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-12 rounded-xl font-black border-slate-200"
+                    onClick={() => setCurrentView('home')}
+                  >
+                    Back to Home
+                  </Button>
+                </div>
+              </main>
+            </div>
+          )}
+
+          {/* Bottom Navigation */}
+          {['home', 'favorites', 'categories', 'cart'].includes(currentView) && (
+            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
+              <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
+                <HomeIcon className="h-6 w-6" />
+                <span className="text-[10px] font-bold">Home</span>
+              </button>
+              <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
+                <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
+                <span className="text-[10px] font-bold">Favorites</span>
+              </button>
+              <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
+                <LayoutGrid className="h-6 w-6" />
+                <span className="text-[10px] font-bold">Categories</span>
+              </button>
+              <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
+                <div className="relative">
+                  <ShoppingCart className="h-6 w-6" />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
+                      {cart.reduce((s, i) => s + i.quantity, 0)}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold">Cart</span>
+              </button>
+            </nav>
+          )}
+
+          {/* Confirmation Dialog */}
+          <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-black text-slate-900">Confirm Your Order?</AlertDialogTitle>
+                <AlertDialogDescription className="font-medium text-slate-500">
+                  Are you sure you want to place this order? You will pay ₹{(cartTotal + 2).toFixed(2)} upon arrival at {profile.address}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-row gap-2 mt-4">
+                <AlertDialogCancel className="flex-1 rounded-xl font-bold mt-0">No, Wait</AlertDialogCancel>
+                <AlertDialogAction className="flex-1 rounded-xl font-bold bg-green-600 hover:bg-green-700" onClick={handlePlaceOrder}>Yes, Place Order</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
 
-      {/* Cart View */}
-      {currentView === 'cart' && (
-        <div className="flex flex-col h-screen overflow-hidden">
-          <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
-            <button onClick={() => setCurrentView('home')}>
-              <ArrowLeft className="h-6 w-6 text-slate-900" />
-            </button>
-            <div className="flex-1">
-              <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
-              <p className="text-xs text-slate-500 font-bold">{cart.length} items</p>
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-4 no-scrollbar bg-slate-50">
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-                <ShoppingBag className="h-20 w-20 mb-6 opacity-20" />
-                <p className="text-lg font-black text-slate-600">Your basket is empty</p>
-                <Button variant="outline" className="mt-6 rounded-xl font-black" onClick={() => setCurrentView('home')}>Start Shopping</Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
-                  {cart.map((item) => (
-                    <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
-                      <div className="h-20 w-20 relative rounded-2xl overflow-hidden bg-white border border-slate-100 p-2 flex-shrink-0">
-                        <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between min-w-0">
-                        <div className="pr-8 relative">
-                          <h4 className="font-black text-sm text-slate-900 line-clamp-1">{item.name}</h4>
-                          <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
-                          <button className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors" onClick={() => removeFromCart(item.productId)}>
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden h-8 shadow-sm">
-                            <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="px-1 text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                            <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}>
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
-                    <div className="flex-1">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || 'Detecting...'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-slate-100 rounded-xl"><Wallet className="h-5 w-5 text-slate-600" /></div>
-                    <div className="flex-1">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Method</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">Scan to pay when delivery Agent arrives</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mb-20">
-                  <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Item Total</span>
-                      <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Delivery Fee</span>
-                      <span className="text-green-600 font-bold">FREE</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Handling Charge</span>
-                      <span className="font-bold">₹2</span>
-                    </div>
-                    <Separator className="bg-slate-100" />
-                    <div className="flex justify-between text-xl font-black">
-                      <span className="text-slate-900">Grand Total</span>
-                      <span className="text-slate-900">₹{(cartTotal + 2).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
-
-          {cart.length > 0 && (
-            <div className="bg-white border-t p-4 pb-12 flex-shrink-0 z-50 shadow-2xl">
-              <Button 
-                className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700 flex items-center justify-between px-6"
-                onClick={() => setIsConfirmOpen(true)}
-              >
-                <div className="text-left">
-                  <p className="text-[10px] opacity-80 uppercase tracking-widest leading-none">Total</p>
-                  <p className="text-xl leading-none mt-1">₹{(cartTotal + 2).toFixed(2)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>Place Order</span>
-                  <ChevronRight className="h-5 w-5" />
-                </div>
-              </Button>
-            </div>
-          )}
+      {/* Loading State */}
+      {isProfileLoading && currentView === 'home' && (
+        <div className="flex flex-col items-center justify-center h-screen space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="font-bold text-slate-500 animate-pulse">Setting up your shop...</p>
         </div>
       )}
-
-      {/* Order Success View */}
-      {currentView === 'order-success' && latestOrder && (
-        <div className="flex flex-col h-screen bg-white">
-          <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
-            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-black text-slate-900">Order Confirmed!</h1>
-              <p className="text-slate-500 font-medium">Your groceries will reach you in 9 minutes.</p>
-            </div>
-
-            <Card className="w-full max-w-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Order ID</span>
-                <span className="font-black text-slate-900">#{latestOrder.id}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Current Status</span>
-                <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-2">
-                  <Clock className="h-3 w-3" />
-                  {STATUS_LABELS[latestOrder.status] || latestOrder.status.replace(/_/g, ' ')}
-                </div>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Delivery Agent</span>
-                <span className="font-black text-slate-900">Assigning...</span>
-              </div>
-            </Card>
-
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Status is managed by your delivery partner</p>
-            
-            <div className="w-full space-y-3 pt-6">
-              <Button 
-                variant="outline" 
-                className="w-full h-12 rounded-xl font-black border-slate-200"
-                onClick={() => setCurrentView('home')}
-              >
-                Back to Home
-              </Button>
-            </div>
-          </main>
-        </div>
-      )}
-
-      {/* Bottom Navigation */}
-      {['home', 'favorites', 'categories', 'cart'].includes(currentView) && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
-          <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
-            <HomeIcon className="h-6 w-6" />
-            <span className="text-[10px] font-bold">Home</span>
-          </button>
-          <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
-            <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
-            <span className="text-[10px] font-bold">Favorites</span>
-          </button>
-          <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
-            <LayoutGrid className="h-6 w-6" />
-            <span className="text-[10px] font-bold">Categories</span>
-          </button>
-          <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
-            <div className="relative">
-              <ShoppingCart className="h-6 w-6" />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
-                  {cart.reduce((s, i) => s + i.quantity, 0)}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-bold">Cart</span>
-          </button>
-        </nav>
-      )}
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-black text-slate-900">Confirm Your Order?</AlertDialogTitle>
-            <AlertDialogDescription className="font-medium text-slate-500">
-              Are you sure you want to place this order? You will scan to pay ₹{(cartTotal + 2).toFixed(2)} once our delivery partner arrives.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-2 mt-4">
-            <AlertDialogCancel className="flex-1 rounded-xl font-bold mt-0">No, Wait</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 rounded-xl font-bold bg-green-600 hover:bg-green-700" onClick={handlePlaceOrder}>Yes, Place Order</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
