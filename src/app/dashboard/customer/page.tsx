@@ -125,12 +125,13 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (gpsLocation) {
       // Simulate reverse geocoding based on coordinates
-      if (gpsLocation.lat === FALLBACK_LAT && gpsLocation.lng === FALLBACK_LNG) {
+      const isDefault = Math.abs(gpsLocation.lat - FALLBACK_LAT) < 0.001 && Math.abs(gpsLocation.lng - FALLBACK_LNG) < 0.001;
+      
+      if (isDefault) {
         setDetectedAddress("Harwara, Dhoomanganj, Prayagraj");
       } else {
-        // Mock a dynamic address string that updates with GPS to feel like a real address
-        // In a real app, this would be a call to Google Maps Geocoding API
-        setDetectedAddress(`Street ${Math.floor(gpsLocation.lat * 100)}, Area ${Math.floor(gpsLocation.lng * 100)}, Current Location`);
+        // Mock a dynamic address string that updates with GPS
+        setDetectedAddress(`Building ${Math.floor(gpsLocation.lat % 100)}, Block ${Math.floor(gpsLocation.lng % 100)}, Global Tech Park`);
       }
     }
   }, [gpsLocation]);
