@@ -473,42 +473,72 @@ export default function CustomerDashboard() {
                     key={cat.name}
                     onClick={() => {
                       setActiveCategory(cat.name);
-                      setCurrentView('categories');
                     }}
                     className="flex flex-col items-center gap-2 min-w-[60px]"
                   >
-                    <div className="p-3 rounded-xl transition-all bg-slate-50 text-slate-600">
+                    <div className={cn(
+                      "p-3 rounded-xl transition-all",
+                      activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-600"
+                    )}>
                       <cat.icon className="h-6 w-6" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500">{cat.name}</span>
+                    <span className={cn(
+                      "text-[10px] font-bold",
+                      activeCategory === cat.name ? "text-primary" : "text-slate-500"
+                    )}>{cat.name}</span>
                   </button>
                 ))}
               </div>
 
               <div className="px-4 py-4 space-y-8">
-                {Object.entries(groupedProducts).map(([category, items]) => (
-                  <section key={category} className="space-y-4">
+                {activeCategory === 'All' ? (
+                  Object.entries(groupedProducts).map(([category, items]) => (
+                    <section key={category} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-black text-slate-900">{category}</h2>
+                        <button 
+                          onClick={() => setActiveCategory(category)}
+                          className="text-primary text-sm font-bold hover:underline"
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                        {items.map(product => (
+                          <ProductCard key={product.id} product={product} layout="horizontal" />
+                        ))}
+                      </div>
+                    </section>
+                  ))
+                ) : (
+                  <section className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-black text-slate-900">{category}</h2>
+                      <h2 className="text-xl font-black text-slate-900">{activeCategory}</h2>
                       <button 
-                        onClick={() => { setActiveCategory(category); setCurrentView('categories'); }}
+                        onClick={() => setActiveCategory('All')}
                         className="text-primary text-sm font-bold hover:underline"
                       >
-                        View all
+                        Clear filters
                       </button>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                      {items.map(product => (
-                        <ProductCard key={product.id} product={product} layout="horizontal" />
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                      {filteredProducts.map(product => (
+                        <ProductCard key={product.id} product={product} layout="grid" />
                       ))}
                     </div>
+                    {filteredProducts.length === 0 && (
+                      <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
+                        <ShoppingBag className="h-16 w-16 mb-4 opacity-10" />
+                        <p className="font-bold">No products found in this category</p>
+                      </div>
+                    )}
                   </section>
-                ))}
+                )}
               </div>
             </main>
           )}
 
-          {/* Categories View */}
+          {/* Categories View (Sidebar based browser) */}
           {currentView === 'categories' && (
             <div className="flex-1 flex overflow-hidden">
               <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
