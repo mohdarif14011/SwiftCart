@@ -199,19 +199,20 @@ export default function CustomerDashboard() {
                 <ArrowLeft className="h-6 w-6 text-slate-900" />
               </button>
               {isHeaderSearching ? (
-                <div className="flex-1 relative flex items-center">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input 
                     autoFocus
                     placeholder={`Search in ${activeCategory}...`} 
-                    className="h-10 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary w-full pr-10"
+                    className="pl-10 pr-10 h-12 bg-slate-50 border-none rounded-xl text-base focus-visible:ring-primary w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   <button 
                     onClick={() => { setSearchQuery(''); setIsHeaderSearching(false); }}
-                    className="absolute right-3 p-1 text-slate-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
               ) : (
