@@ -34,7 +34,10 @@ import {
   ChevronRight,
   Trash2,
   CheckCircle2,
-  LogOut
+  LogOut,
+  Navigation,
+  Loader2,
+  Phone
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -52,11 +55,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, useDoc } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const CATEGORIES = [
   { name: 'Vegetables', icon: Leaf },
@@ -80,18 +84,95 @@ export default function CustomerDashboard() {
   const { cart, user, products, favorites, orders, updateCartQuantity, removeFromCart, addToCart, placeOrder, toggleFavorite, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
-  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'favorites' | 'categories' | 'cart' | 'order-success' | 'onboarding-map' | 'onboarding-details'>('home');
   const [sortBy, setSortBy] = useState<'none' | 'low-to-high' | 'high-to-low'>('none');
   const [isClient, setIsClient] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
+  // Onboarding state
+  const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+
   const router = useRouter();
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
+
+  // Check if user profile exists
+  const userProfileRef = useMemo(() => user?.id ? doc(db, 'customers', user.id) : null, [db, user?.id]);
+  const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (isClient && !isProfileLoading && !profile && user) {
+      setCurrentView('onboarding-map');
+      handleAutoLocate();
+    }
+  }, [isClient, isProfileLoading, profile, user]);
+
+  const handleAutoLocate = () => {
+    setLocating(true);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGpsLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setLocating(false);
+          toast({ title: "Location detected", description: "Your current position has been pinpointed." });
+        },
+        (error) => {
+          console.error(error);
+          setLocating(false);
+          // Fallback to a default location for demo
+          setGpsLocation({ lat: 25.4358, lng: 81.8463 });
+          toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default location." });
+        }
+      );
+    } else {
+      setLocating(false);
+      setGpsLocation({ lat: 25.4358, lng: 81.8463 });
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    if (!user?.id) return;
+    if (!onboardingForm.phone || !onboardingForm.address) {
+      toast({ variant: "destructive", title: "Required fields", description: "Please provide your phone number and full address." });
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const names = user.name.split(' ');
+      const firstName = names[0] || 'Customer';
+      const lastName = names.slice(1).join(' ') || 'User';
+
+      await setDoc(doc(db, 'customers', user.id), {
+        id: user.id,
+        firstName,
+        lastName,
+        email: user.email,
+        phone: onboardingForm.phone,
+        address: onboardingForm.address,
+        location: gpsLocation,
+        createdAt: new Date().toISOString()
+      });
+
+      toast({ title: "Profile complete", description: "Welcome to SwiftCart!" });
+      setCurrentView('home');
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -133,7 +214,7 @@ export default function CustomerDashboard() {
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: 'Harwara, Dhoomanganj, Prayagraj',
+      address: profile?.address || 'Your saved address',
     };
     placeOrder(newOrder);
     setCurrentView('order-success');
@@ -161,6 +242,104 @@ export default function CustomerDashboard() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
+      {/* Onboarding: Map Step */}
+      {currentView === 'onboarding-map' && (
+        <div className="flex flex-col h-screen bg-white">
+          <div className="p-6 space-y-2">
+            <h1 className="text-3xl font-black text-slate-900">Delivery Location</h1>
+            <p className="text-slate-500 font-medium">Pinpoint your house for precise delivery.</p>
+          </div>
+          
+          <div className="flex-1 relative bg-slate-100 overflow-hidden">
+            <img 
+              src="https://picsum.photos/seed/deliverymap/1200/1200" 
+              alt="Map" 
+              className="w-full h-full object-cover opacity-60 grayscale"
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="relative">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
+                  <Navigation className="h-6 w-6 text-white" />
+                </div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold whitespace-nowrap shadow-xl">
+                  {gpsLocation ? `${gpsLocation.lat.toFixed(4)}, ${gpsLocation.lng.toFixed(4)}` : 'Detecting...'}
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              className="absolute bottom-6 right-6 rounded-full h-14 w-14 bg-white shadow-2xl p-0"
+              onClick={handleAutoLocate}
+              disabled={locating}
+            >
+              {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Navigation className="h-6 w-6 text-primary" />}
+            </Button>
+          </div>
+
+          <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
+            <Button 
+              className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
+              onClick={() => setCurrentView('onboarding-details')}
+              disabled={!gpsLocation}
+            >
+              Confirm Location <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding: Details Step */}
+      {currentView === 'onboarding-details' && (
+        <div className="flex flex-col h-screen bg-white p-6 space-y-8">
+          <div className="space-y-2">
+            <button onClick={() => setCurrentView('onboarding-map')} className="p-1 -ml-1">
+              <ArrowLeft className="h-6 w-6 text-slate-900" />
+            </button>
+            <h1 className="text-3xl font-black text-slate-900">Few more details</h1>
+            <p className="text-slate-500 font-medium">Help us reach your doorstep faster.</p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input 
+                  placeholder="e.g. +91 98765 43210" 
+                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                  value={onboardingForm.phone}
+                  onChange={(e) => setOnboardingForm({...onboardingForm, phone: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-slate-400">House / Flat / Area</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-5 h-5 w-5 text-slate-400" />
+                <textarea 
+                  placeholder="Street name, landmark, house number..." 
+                  className="w-full pl-12 pr-4 py-4 min-h-[120px] bg-slate-50 border-none rounded-2xl text-lg font-bold focus:ring-2 focus:ring-primary outline-none"
+                  value={onboardingForm.address}
+                  onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1" />
+
+          <Button 
+            className="w-full h-14 text-lg font-black rounded-2xl bg-green-600 hover:bg-green-700 shadow-xl"
+            onClick={handleOnboardingComplete}
+            disabled={savingProfile}
+          >
+            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : "Complete Profile"}
+          </Button>
+        </div>
+      )}
+
       {/* Home View */}
       {currentView === 'home' && (
         <>
@@ -176,8 +355,8 @@ export default function CustomerDashboard() {
                     <Clock className="h-3 w-3" /> 24/7
                   </div>
                 </div>
-                <button className="flex items-center text-xs text-slate-500 font-medium mt-1">
-                  Harwara, Dhoomanganj, Prayagraj <ChevronDown className="h-3 w-3 ml-0.5" />
+                <button className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]">
+                  {profile?.address || 'Harwara, Dhoomanganj...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
                 </button>
               </div>
               <div className="flex items-center gap-3">
@@ -273,7 +452,7 @@ export default function CustomerDashboard() {
               <div className="flex flex-col overflow-hidden min-w-0">
                 <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
                 <div className="flex items-center text-[10px] text-primary font-bold">
-                  Delivering to : <span className="text-slate-500 ml-1 truncate">Harwara, Dhoomanganj...</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  Delivering to : <span className="text-slate-500 ml-1 truncate">{profile?.address || 'Detecting...'}</span> <ChevronDown className="h-3 w-3 flex-shrink-0" />
                 </div>
               </div>
             </div>
@@ -431,7 +610,7 @@ export default function CustomerDashboard() {
                     <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
                     <div className="flex-1">
                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">Harwara, Dhoomanganj, Prayagraj, 211011</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">{profile?.address || 'Detecting...'}</p>
                     </div>
                   </div>
                 </div>
@@ -539,7 +718,7 @@ export default function CustomerDashboard() {
       )}
 
       {/* Bottom Navigation */}
-      {currentView !== 'order-success' && (
+      {['home', 'favorites', 'categories', 'cart'].includes(currentView) && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
           <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
             <HomeIcon className="h-6 w-6" />

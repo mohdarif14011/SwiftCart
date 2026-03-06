@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useAppStore } from '@/app/lib/store';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,6 +17,7 @@ export default function CustomerAuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
+  const db = useFirestore();
   const setUser = useAppStore((state) => state.setUser);
   const { toast } = useToast();
 
@@ -34,11 +36,16 @@ export default function CustomerAuthPage() {
         role: 'CUSTOMER',
       });
       
+      // Check if profile exists to determine if onboarding is needed
+      const docRef = doc(db, 'customers', user.uid);
+      const docSnap = await getDoc(docRef);
+      
       toast({ 
         title: "Welcome to SwiftCart!", 
         description: `Signed in as ${user.displayName || user.email}` 
       });
       
+      // Dashboard will handle the onboarding view if docSnap.exists() is false
       router.push('/dashboard/customer');
     } catch (error: any) {
       console.error(error);
