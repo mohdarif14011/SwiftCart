@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/app/components/ProductCard';
 import { 
   Search, 
   ShoppingCart, 
@@ -41,7 +40,7 @@ const CATEGORIES = [
 ];
 
 export default function CustomerDashboard() {
-  const { products, cart, user, updateCartQuantity, removeFromCart, placeOrder, setUser } = useAppStore();
+  const { cart, user, updateCartQuantity, removeFromCart, placeOrder, setUser } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [isClient, setIsClient] = useState(false);
@@ -50,13 +49,6 @@ export default function CustomerDashboard() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -72,11 +64,6 @@ export default function CustomerDashboard() {
       address: 'Harwara, Dhoomanganj, Prayagraj',
     };
     placeOrder(newOrder);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    router.push('/');
   };
 
   if (!isClient) return null;
@@ -141,19 +128,6 @@ export default function CustomerDashboard() {
             </button>
           ))}
         </div>
-
-        {/* Product Grid */}
-        <section className="px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black text-slate-900">{activeCategory === 'All' ? 'Products' : activeCategory}</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{filteredProducts.length} items</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
       </main>
 
       {/* Bottom Navigation */}
