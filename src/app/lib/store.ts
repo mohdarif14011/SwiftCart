@@ -27,6 +27,9 @@ const INITIAL_PRODUCTS: Product[] = [
   { id: '7', name: 'Gala Apples', category: 'Fruits', price: 0.79, inventory: 45, imageUrl: 'https://picsum.photos/seed/fruit2/300/300', description: 'Sweet and crunchy gala apples.' },
   { id: '8', name: 'Fresh Carrots', category: 'Vegetables', price: 1.19, inventory: 35, imageUrl: 'https://picsum.photos/seed/veg2/300/300', description: 'Orange and crunchy fresh carrots.' },
   { id: '9', name: 'Chocolate Cookies', category: 'Snacks', price: 2.49, inventory: 25, imageUrl: 'https://picsum.photos/seed/snack2/300/300', description: 'Double chocolate chip cookies.' },
+  { id: '10', name: 'Dish Soap 500ml', category: 'Home Essentials', price: 3.49, inventory: 30, imageUrl: 'https://picsum.photos/seed/cleaning1/300/300', description: 'Tough on grease dishwashing liquid.' },
+  { id: '11', name: 'Paper Towels (2 Pack)', category: 'Home Essentials', price: 4.99, inventory: 20, imageUrl: 'https://picsum.photos/seed/cleaning2/300/300', description: 'Ultra absorbent multi-purpose paper towels.' },
+  { id: '12', name: 'All-Purpose Cleaner', category: 'Home Essentials', price: 5.29, inventory: 15, imageUrl: 'https://picsum.photos/seed/cleaning3/300/300', description: 'Antibacterial spray for all surfaces.' },
 ];
 
 export const useAppStore = create<AppState>((set) => ({

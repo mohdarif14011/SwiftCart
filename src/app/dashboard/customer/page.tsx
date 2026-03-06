@@ -23,7 +23,8 @@ import {
   Leaf,
   Milk,
   Croissant,
-  Cookie
+  Cookie,
+  Sparkles
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +38,7 @@ const CATEGORIES = [
   { name: 'Dairy', icon: Milk },
   { name: 'Bakery', icon: Croissant },
   { name: 'Snacks', icon: Cookie },
+  { name: 'Home Essentials', icon: Sparkles },
 ];
 
 const BANNERS = [

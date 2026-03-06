@@ -1,4 +1,3 @@
-
 {
   "placeholderImages": [
     {
@@ -24,6 +23,12 @@
       "description": "Freshly baked bread and pastries",
       "imageUrl": "https://picsum.photos/seed/bakery/600/400",
       "imageHint": "bakery bread"
+    },
+    {
+      "id": "home-essentials",
+      "description": "Cleaning supplies and home care",
+      "imageUrl": "https://picsum.photos/seed/homeess/600/400",
+      "imageHint": "cleaning supplies"
     },
     {
       "id": "meat-poultry",
