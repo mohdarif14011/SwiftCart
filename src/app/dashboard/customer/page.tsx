@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -185,9 +184,9 @@ export default function CustomerDashboard() {
         nearby: onboardingForm.nearby,
         location: gpsLocation,
         createdAt: new Date().toISOString()
-      });
+      }, { merge: true });
 
-      toast({ title: "Profile complete", description: "Welcome to SwiftCart!" });
+      toast({ title: "Profile updated", description: "Your details have been saved." });
       setCurrentView('home');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -299,12 +298,28 @@ export default function CustomerDashboard() {
             >
               {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
             </Button>
+            
+            {profile && (
+              <Button 
+                variant="ghost" 
+                className="absolute top-6 left-6 rounded-full h-10 w-10 bg-white/80 backdrop-blur-sm shadow-md p-0"
+                onClick={() => setCurrentView('home')}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
           </div>
 
           <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
             <Button 
               className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
-              onClick={() => setCurrentView('onboarding-details')}
+              onClick={() => {
+                setOnboardingForm({
+                  phone: profile?.phone || '',
+                  nearby: profile?.nearby || ''
+                });
+                setCurrentView('onboarding-details');
+              }}
               disabled={!gpsLocation}
             >
               Confirm Location <ChevronRight className="ml-2 h-5 w-5" />
@@ -368,7 +383,7 @@ export default function CustomerDashboard() {
             onClick={handleOnboardingComplete}
             disabled={savingProfile}
           >
-            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : "Complete Profile"}
+            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : (profile ? "Update Profile" : "Complete Profile")}
           </Button>
         </div>
       )}
@@ -388,7 +403,10 @@ export default function CustomerDashboard() {
                     <Clock className="h-3 w-3" /> 24/7
                   </div>
                 </div>
-                <button className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]">
+                <button 
+                  onClick={() => setCurrentView('onboarding-map')}
+                  className="flex items-center text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]"
+                >
                   {profile?.address || detectedAddress || 'Detecting Location...'} <ChevronDown className="h-3 w-3 ml-0.5 flex-shrink-0" />
                 </button>
               </div>
@@ -484,11 +502,14 @@ export default function CustomerDashboard() {
               </button>
               <div className="flex flex-col overflow-hidden min-w-0">
                 <h1 className="text-lg font-black text-slate-900 leading-tight truncate">{activeCategory}</h1>
-                <div className="flex items-center text-[10px] font-bold">
+                <button 
+                  onClick={() => setCurrentView('onboarding-map')}
+                  className="flex items-center text-[10px] font-bold"
+                >
                   <span className="text-slate-400 uppercase tracking-tighter">Delivering to</span>
                   <span className="text-slate-500 ml-1 truncate max-w-[120px]">{profile?.address || detectedAddress || 'Detecting...'}</span> 
                   <ChevronDown className="h-3 w-3 ml-0.5 text-slate-400 flex-shrink-0" />
-                </div>
+                </button>
               </div>
             </div>
             <div className="relative flex-1 max-w-[200px] sm:max-w-md ml-auto">
