@@ -66,6 +66,7 @@ import { useAuth, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 const CATEGORIES = [
+  { name: 'All', icon: LayoutGrid },
   { name: 'Vegetables', icon: Leaf },
   { name: 'Fruits', icon: Apple },
   { name: 'Dairy', icon: Milk },
