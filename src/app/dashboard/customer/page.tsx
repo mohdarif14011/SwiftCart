@@ -30,7 +30,8 @@ import {
   Share2,
   ArrowLeft,
   Star,
-  ChevronRight
+  ChevronRight,
+  CookingPot
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -44,6 +45,7 @@ const CATEGORIES = [
   { name: 'Bakery', icon: Croissant },
   { name: 'Snacks', icon: Cookie },
   { name: 'Home Essentials', icon: Sparkles },
+  { name: 'Kitchen Essentials', icon: CookingPot },
 ];
 
 export default function CustomerDashboard() {

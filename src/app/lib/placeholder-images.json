@@ -1,3 +1,4 @@
+
 {
   "placeholderImages": [
     {
@@ -29,6 +30,12 @@
       "description": "Cleaning supplies and home care",
       "imageUrl": "https://picsum.photos/seed/homeess/600/400",
       "imageHint": "cleaning supplies"
+    },
+    {
+      "id": "kitchen-essentials",
+      "description": "Cookware and kitchen gadgets",
+      "imageUrl": "https://picsum.photos/seed/kitchen/600/400",
+      "imageHint": "kitchen utensils"
     },
     {
       "id": "meat-poultry",

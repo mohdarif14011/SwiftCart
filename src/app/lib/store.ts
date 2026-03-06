@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { Product, CartItem, Order, UserRole, User, OrderStatus } from '@/app/types';
 
@@ -32,6 +33,9 @@ const INITIAL_PRODUCTS: Product[] = [
   { id: '10', name: 'Dish Soap 500ml', category: 'Home Essentials', price: 3.49, inventory: 30, imageUrl: 'https://picsum.photos/seed/cleaning1/300/300', description: 'Tough on grease dishwashing liquid.' },
   { id: '11', name: 'Paper Towels (2 Pack)', category: 'Home Essentials', price: 4.99, inventory: 20, imageUrl: 'https://picsum.photos/seed/cleaning2/300/300', description: 'Ultra absorbent multi-purpose paper towels.' },
   { id: '12', name: 'All-Purpose Cleaner', category: 'Home Essentials', price: 5.29, inventory: 15, imageUrl: 'https://picsum.photos/seed/cleaning3/300/300', description: 'Antibacterial spray for all surfaces.' },
+  { id: '13', name: 'Non-stick Frying Pan', category: 'Kitchen Essentials', price: 24.99, inventory: 10, imageUrl: 'https://picsum.photos/seed/kitchen1/300/300', description: 'Durable 10-inch non-stick skillet.' },
+  { id: '14', name: 'Kitchen Knife Set', category: 'Kitchen Essentials', price: 45.00, inventory: 5, imageUrl: 'https://picsum.photos/seed/kitchen2/300/300', description: 'Professional 5-piece stainless steel knife set.' },
+  { id: '15', name: 'Stainless Steel Whisk', category: 'Kitchen Essentials', price: 7.50, inventory: 20, imageUrl: 'https://picsum.photos/seed/kitchen3/300/300', description: 'High-quality whisk for baking and cooking.' },
 ];
 
 export const useAppStore = create<AppState>((set) => ({
