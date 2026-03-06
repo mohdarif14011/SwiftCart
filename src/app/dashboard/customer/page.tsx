@@ -290,7 +290,7 @@ export default function CustomerDashboard() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative">
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
-                  <Navigation className="h-6 w-6 text-white" />
+                  <MapPin className="h-6 w-6 text-white" />
                 </div>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function CustomerDashboard() {
               onClick={handleAutoLocate}
               disabled={locating}
             >
-              {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Navigation className="h-6 w-6 text-primary" />}
+              {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
             </Button>
           </div>
 
