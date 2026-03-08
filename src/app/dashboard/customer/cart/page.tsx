@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,7 +17,8 @@ import {
   X, 
   TicketPercent, 
   Info,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { 
   AlertDialog, 
@@ -55,13 +55,16 @@ export default function CustomerCart() {
   }, [profile]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = cart.length > 0 ? 20.00 : 0;
+  
+  // Delivery Fee Logic: ₹5 if total <= 149, else FREE (0)
+  const deliveryFee = cart.length > 0 ? (cartTotal <= 149 ? 5.00 : 0.00) : 0;
+  const isFreeDelivery = cartTotal > 149;
+  const amountToFreeDelivery = 150 - cartTotal;
 
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
     const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
     
-    // Construct the order with precise customer coordinates from their profile
     const newOrder = {
       id: orderId,
       userId: firebaseUser?.uid || 'anonymous',
@@ -69,6 +72,7 @@ export default function CustomerCart() {
       contactNumber,
       items: [...cart],
       total: cartTotal + deliveryFee,
+      deliveryFee: deliveryFee,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
       address: deliveryAddress || 'Delivery to your current location',
@@ -109,6 +113,20 @@ export default function CustomerCart() {
         </div>
       ) : (
         <div className="px-6 space-y-4 mt-2">
+          {/* Free Delivery Banner */}
+          <div className={`p-4 rounded-2xl flex items-center gap-3 border ${isFreeDelivery ? 'bg-green-50 border-green-100 text-green-700' : 'bg-primary/5 border-primary/10 text-primary'}`}>
+            <Truck className="h-5 w-5 shrink-0" />
+            <div className="flex-1">
+              {isFreeDelivery ? (
+                <p className="text-xs font-bold uppercase tracking-wider">You've unlocked FREE Delivery!</p>
+              ) : (
+                <p className="text-xs font-bold leading-tight">
+                  Add <span className="underline">₹{amountToFreeDelivery.toFixed(0)}</span> more to your cart for <span className="uppercase">Free Delivery</span>
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-1">
             {cart.map((item) => (
               <div key={item.productId} className="py-3 flex gap-4 border-b border-slate-50 relative group">
@@ -229,8 +247,10 @@ export default function CustomerCart() {
               <span className="text-xs font-bold text-slate-900">₹{cartTotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-medium text-slate-400">Delivery</span>
-              <span className="text-xs font-bold text-slate-900">₹{deliveryFee.toFixed(2)}</span>
+              <span className="text-xs font-medium text-slate-400">Delivery Fee</span>
+              <span className={`text-xs font-bold ${deliveryFee === 0 ? 'text-green-600' : 'text-slate-900'}`}>
+                {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
+              </span>
             </div>
             <Separator className="bg-slate-50 my-1" />
             <div className="flex justify-between items-center">

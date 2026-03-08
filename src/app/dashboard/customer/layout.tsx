@@ -1,10 +1,9 @@
-
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
-import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search, Loader2 } from 'lucide-react';
+import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search, Loader2, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -87,8 +86,11 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 overflow-hidden flex-1">
             <div className="flex flex-col cursor-pointer min-w-0" onClick={() => router.push('/dashboard/customer/onboarding')}>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Delivering in 9 mins</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">9 mins</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Sparkles className="h-2.5 w-2.5" /> FREE Delivery above ₹149
+                </span>
                 <ChevronDown className="h-3 w-3 text-slate-400" />
               </div>
               <span className="text-sm font-bold text-slate-900 line-clamp-1 truncate leading-tight">
