@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, Truck, ArrowLeft, Loader2 } from 'lucide-react';
+import { Shield, Truck, ArrowLeft, Loader2, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAppStore } from '@/app/lib/store';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function StaffAuthPage() {
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,11 @@ export default function StaffAuthPage() {
         setUser({ id: uid, name: 'Agent', email, role: 'DELIVERY_AGENT' });
         router.push('/dashboard/delivery');
       } else {
-        toast({ title: "Role check", description: "No staff role found. Please contact an administrator." });
+        toast({ 
+          variant: "destructive",
+          title: "Access Denied", 
+          description: "Your account is authenticated, but no staff role (Admin/Agent) is assigned to this UID in Firestore." 
+        });
       }
     } catch (error: any) {
       toast({ 
@@ -79,7 +84,15 @@ export default function StaffAuthPage() {
           <CardTitle className="text-2xl font-bold font-headline text-primary">Staff Portal</CardTitle>
           <CardDescription>Administrative and Delivery Agent Access</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <Alert variant="default" className="bg-primary/5 border-primary/20">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-xs font-bold uppercase tracking-wider text-primary">Developer Note</AlertTitle>
+            <AlertDescription className="text-xs text-muted-foreground leading-relaxed">
+              To setup your first admin: create a user in Firebase Auth, then manually add a document with that user's UID to the <code className="font-mono bg-primary/10 px-1 rounded">roles_admin</code> collection in Firestore.
+            </AlertDescription>
+          </Alert>
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Work Email</Label>
@@ -89,14 +102,20 @@ export default function StaffAuthPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required />
             </div>
-            <Button className="w-full py-6 text-lg" type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Access Dashboard
+            <Button className="w-full py-6 text-lg font-bold" type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Access Dashboard"
+              )}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center justify-center">
-          <p className="text-xs text-muted-foreground">Unauthorized access is prohibited.</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Secure Staff Access Only</p>
         </CardFooter>
       </Card>
     </div>
