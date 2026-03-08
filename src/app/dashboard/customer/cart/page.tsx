@@ -186,9 +186,19 @@ export default function CustomerCart() {
           </div>
 
           <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100/50 space-y-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Delivery to</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Delivery to</h3>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary hover:bg-primary/5"
+                onClick={() => router.push('/dashboard/customer/onboarding')}
+              >
+                Edit
+              </Button>
             </div>
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
                <p className="text-sm font-medium text-slate-900 leading-relaxed">
