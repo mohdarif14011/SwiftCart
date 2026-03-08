@@ -399,12 +399,14 @@ export default function CustomerDashboard() {
           {/* Header */}
           {(currentView === 'home' || currentView === 'categories') && (
             <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex items-center gap-4">
-              <button 
-                onClick={() => setCurrentView('home')} 
-                className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
-              >
-                <ArrowLeft className="h-6 w-6 text-slate-900" />
-              </button>
+              {currentView !== 'home' && (
+                <button 
+                  onClick={() => setCurrentView('home')} 
+                  className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+                >
+                  <ArrowLeft className="h-6 w-6 text-slate-900" />
+                </button>
+              )}
               
               <h1 className="text-xl font-black text-slate-900 whitespace-nowrap hidden sm:block">
                 {currentView === 'home' ? 'SwiftCart' : 'Categories'}
