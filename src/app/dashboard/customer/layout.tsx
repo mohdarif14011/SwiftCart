@@ -1,7 +1,7 @@
 
 'use client';
 
-import { ReactNode, useEffect, useState, useMemo } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search, Loader2 } from 'lucide-react';
@@ -29,10 +29,10 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
-    // Wait for all essential states to be determined before making navigation decisions
+    // Only perform navigation logic when client is ready and initial loading is complete
     if (!isClient || isUserLoading || isProfileLoading) return;
 
-    // 1. Authentication Gate
+    // 1. Auth Gate
     if (!firebaseUser) {
       router.replace('/auth/customer');
       return;
@@ -40,41 +40,34 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
     const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
 
-    // 2. Profile Gate: Force onboarding only if the profile is missing and they aren't already there.
-    // This ensures the "Delivery Info" page is presented as the first step for new users.
+    // 2. Profile Gate: Forced Onboarding
+    // If user has no profile document, they MUST go to onboarding.
     if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
+      return;
     }
-    
-    // Note: We intentionally don't redirect OUT of onboarding if a profile exists here
-    // to allow users to manually edit their profile/address if they wish.
+
+    // Note: We stay on the same page on refresh because pathname is preserved
+    // and children are only rendered once we know the profile exists (or we're on onboarding).
   }, [isClient, firebaseUser, isUserLoading, profile, isProfileLoading, pathname, router]);
-
-  const handleLogout = async () => {
-    await auth.signOut();
-    setUser(null);
-    router.push('/');
-  };
-
-  const navItems = [
-    { name: 'Home', href: '/dashboard/customer', icon: HomeIcon },
-    { name: 'Categories', href: '/dashboard/customer/categories', icon: LayoutGrid },
-    { name: 'Favorites', href: '/dashboard/customer/favorites', icon: Heart },
-    { name: 'Orders', href: '/dashboard/customer/orders', icon: Package },
-  ];
 
   if (!isClient) return null;
 
-  // Global loading state prevents layout shifts and redundant redirects during page refresh
+  // Show a clean loading state while determining auth/profile status to prevent layout jumps or flashes
   if (isUserLoading || isProfileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
+        <div className="bg-primary/10 p-4 rounded-full animate-pulse">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+          Synchronizing...
+        </p>
       </div>
     );
   }
 
-  // Standard layouts for full-screen specialized views
+  // Specialized full-screen views (No global header/nav)
   if (pathname === '/dashboard/customer/onboarding' || pathname === '/dashboard/customer/cart') {
     return <main className="min-h-screen bg-white">{children}</main>;
   }
@@ -123,7 +116,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
                   <Separator className="my-1" />
                   <DropdownMenuItem onClick={() => router.push('/dashboard/customer/onboarding')} className="font-medium cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Profile</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/customer/orders')} className="font-medium cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-medium cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => { await auth.signOut(); setUser(null); router.push('/'); }} className="text-destructive font-medium cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
