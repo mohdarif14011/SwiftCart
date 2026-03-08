@@ -4,49 +4,26 @@ service cloud.firestore {
 
     /**
      * SwiftCart Security Rules
-     *
-     * Core Philosophy:
-     * This ruleset implements a strict user-ownership model for all personal data (carts, orders, addresses), 
-     * while maintaining a public-read catalog for products and categories. Administrative actions and 
-     * delivery fulfillment are governed by Role-Based Access Control (RBAC) using dedicated role collections.
-     *
-     * Data Structure:
-     * - User-specific data is nested under /users/{userId}/ to leverage path-based authorization.
-     * - Catalog data (Products, Categories) is top-level and publicly accessible.
-     * - Roles are managed via /roles_admin and /roles_delivery_agent collections.
-     *
-     * Key Security Decisions:
-     * 1. Authorization Independence: Critical fields like 'userId' are denormalized into deep subcollections 
-     *    (like cart items) to ensure rules remain performant and don't require cross-document lookups.
-     * 2. Prototyping Flexibility: Rules enforce WHO can access data but do not strictly validate the 
-     *    shape/schema of the content fields, allowing for rapid frontend iteration.
-     * 3. Role Verification: Admin and Delivery Agent status is verified via existence checks in 
-     *    dedicated role-tracking collections.
      */
 
     // --- Helper Functions ---
 
-    /** @description Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the user is an owner and the document exists (for updates/deletes). */
     function isExistingOwner(userId) {
       return resource != null && isOwner(userId);
     }
 
-    /** @description Checks if the authenticated user has the 'Admin' role. */
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    /** @description Checks if the authenticated user has the 'Delivery Agent' role. */
     function isDeliveryAgent() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_delivery_agent/$(request.auth.uid));
     }
@@ -54,121 +31,78 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     /**
-     * @description Rules for User profiles. Users can only manage their own profile.
-     * @path /users/{userId}
-     * @allow (create) User with UID 'abc' creating /users/abc
-     * @deny (read) User 'abc' trying to read /users/xyz
-     * @principle Ownership: Enforces that the document ID matches the Auth UID.
+     * @description Rules for Customer profiles.
+     * @path /customers/{userId}
      */
-    match /users/{userId} {
-      allow get, list: if isOwner(userId);
+    match /customers/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow update: if (isExistingOwner(userId) && request.resource.data.id == resource.data.id) || isAdmin();
+      allow delete: if isAdmin();
 
-      /**
-       * @description Rules for saved addresses.
-       * @path /users/{userId}/addresses/{addressId}
-       * @allow (list) User 'abc' listing their own addresses.
-       * @deny (create) User 'abc' setting 'userId' to 'xyz' in the data.
-       * @principle Relational Integrity: Ensures denormalized userId matches the path and auth context.
-       */
       match /addresses/{addressId} {
-        allow get, list: if isOwner(userId);
+        allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+        allow delete: if isExistingOwner(userId) || isAdmin();
       }
 
-      /**
-       * @description Rules for User Carts.
-       * @path /users/{userId}/carts/{cartId}
-       * @allow (get) User 'abc' fetching their active cart.
-       * @principle Ownership: Restricted to the path-defined owner.
-       */
       match /carts/{cartId} {
-        allow get, list: if isOwner(userId);
+        allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+        allow delete: if isExistingOwner(userId) || isAdmin();
 
-        /**
-         * @description Rules for Cart Items.
-         * @path /users/{userId}/carts/{cartId}/items/{cartItemId}
-         * @principle Authorization Independence: Uses denormalized userId on the item for direct checks.
-         */
         match /items/{cartItemId} {
-          allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
+          allow get, list: if isOwner(userId) || isAdmin();
+          allow create, update, delete: if isOwner(userId) || isAdmin();
         }
       }
 
-      /**
-       * @description Rules for User Orders. Visible to the user and the assigned delivery agent.
-       * @path /users/{userId}/orders/{orderId}
-       * @allow (get) Delivery Agent 'agent_1' reading an order assigned to them.
-       * @principle Shared Access: Grants read access to owners and assigned agents.
-       */
       match /orders/{orderId} {
-        allow get, list: if isOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid);
+        allow get, list: if isOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid);
-        allow delete: if false; // Orders are generally immutable/archived
+        allow update: if isExistingOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid) || isAdmin();
+        allow delete: if isAdmin();
 
         match /items/{orderItemId} {
-          allow get, list: if isOwner(userId) || isDeliveryAgent();
+          allow get, list: if isOwner(userId) || isDeliveryAgent() || isAdmin();
           allow create: if isOwner(userId);
-          allow update, delete: if false;
+          allow update, delete: if isAdmin();
         }
       }
 
-      /**
-       * @description Rules for Shopping Lists.
-       * @path /users/{userId}/shopping_lists/{listId}
-       */
       match /shopping_lists/{listId} {
-        allow get, list: if isOwner(userId);
+        allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+        allow delete: if isExistingOwner(userId) || isAdmin();
 
         match /items/{listItemId} {
-          allow get, list: if isOwner(userId);
-          allow create, update, delete: if isOwner(userId);
+          allow get, list: if isOwner(userId) || isAdmin();
+          allow create, update, delete: if isOwner(userId) || isAdmin();
         }
       }
     }
 
     /**
      * @description Public Product Catalog.
-     * @path /products/{productId}
-     * @allow (read) Unauthenticated guest browsing products.
-     * @deny (write) Any non-admin user trying to change product price.
-     * @principle Role-Based Access: Publicly readable, admin-only writes.
      */
     match /products/{productId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Public Category List.
-     * @path /categories/{categoryId}
-     */
     match /categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Delivery Agent profiles and live location.
-     * @path /delivery_agents/{agentId}
-     * @allow (update) Agent 'agent_1' updating their current latitude/longitude.
-     * @principle Verified Identity: Agents can only update their own status/location.
+     * @description Delivery Agent profiles.
      */
-    match /delivery_agents/{agentId} {
+    match /deliveryAgents/{agentId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin() || isOwner(agentId);
       allow update: if isExistingOwner(agentId) || isAdmin();
@@ -176,24 +110,16 @@ service cloud.firestore {
     }
 
     /**
-     * @description Admin Role tracking collection.
-     * @path /roles_admin/{userId}
-     * @principle Restricted Access: Only existing admins can manage roles.
+     * @description Role tracking collections.
      */
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
-      allow write: if isAdmin();
+      allow list, write: if isAdmin();
     }
 
-    /**
-     * @description Delivery Agent Role tracking collection.
-     * @path /roles_delivery_agent/{userId}
-     */
     match /roles_delivery_agent/{userId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
-      allow write: if isAdmin();
+      allow list, write: if isAdmin();
     }
   }
 }

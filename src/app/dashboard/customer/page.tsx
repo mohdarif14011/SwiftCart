@@ -59,8 +59,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useAuth, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useAuth, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 const CATEGORIES = [
   { name: 'All', icon: LayoutGrid },
@@ -147,7 +147,7 @@ export default function CustomerDashboard() {
     }
   };
 
-  const handleOnboardingComplete = async () => {
+  const handleOnboardingComplete = () => {
     if (!user?.id) return;
     if (!onboardingForm.phone.trim()) {
       toast({ variant: "destructive", title: "Missing Phone", description: "Please provide your mobile number." });
@@ -159,30 +159,27 @@ export default function CustomerDashboard() {
     }
 
     setSavingProfile(true);
-    try {
-      const names = user.name.split(' ');
-      const firstName = names[0] || 'Customer';
-      const lastName = names.slice(1).join(' ') || 'User';
+    const names = user.name.split(' ');
+    const firstName = names[0] || 'Customer';
+    const lastName = names.slice(1).join(' ') || 'User';
 
-      await setDoc(doc(db, 'customers', user.id), {
-        id: user.id,
-        firstName,
-        lastName,
-        email: user.email,
-        phone: onboardingForm.phone,
-        address: onboardingForm.address,
-        nearby: onboardingForm.nearby,
-        location: gpsLocation,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+    const profileData = {
+      id: user.id,
+      firstName,
+      lastName,
+      email: user.email,
+      phone: onboardingForm.phone,
+      address: onboardingForm.address,
+      nearby: onboardingForm.nearby,
+      location: gpsLocation,
+      updatedAt: new Date().toISOString()
+    };
 
-      toast({ title: "Profile Saved", description: "Your delivery details are set." });
-      setCurrentView('home');
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
-      setSavingProfile(false);
-    }
+    setDocumentNonBlocking(doc(db, 'customers', user.id), profileData, { merge: true });
+
+    toast({ title: "Profile Saved", description: "Your delivery details are set." });
+    setCurrentView('home');
+    setSavingProfile(false);
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -882,7 +879,14 @@ export default function CustomerDashboard() {
                 <span className="text-[10px] font-bold">Categories</span>
               </button>
               <button onClick={() => setCurrentView('orders')} className={cn("flex flex-col items-center gap-1", currentView === 'orders' ? 'text-green-600' : 'text-slate-400')}>
-                <Package className="h-6 w-6" />
+                <div className="relative">
+                  <Package className="h-6 w-6" />
+                  {orders.some(o => o.status !== 'DELIVERED') && (
+                    <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-3 w-3 rounded-full flex items-center justify-center border border-white">
+                      !
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-bold">Orders</span>
               </button>
               <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
