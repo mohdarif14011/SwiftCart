@@ -1,9 +1,11 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * SwiftCart Security Rules
+     * SwiftCart Security Rules - v1.0.1
+     * Synchronized with 'customers' and 'deliveryAgents' collection naming.
      */
 
     // --- Helper Functions ---
@@ -14,10 +16,6 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
     }
 
     function isAdmin() {
@@ -31,72 +29,14 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     /**
-     * @description Rules for Customer profiles.
-     * @path /customers/{userId}
+     * @description Customer profiles.
      */
     match /customers/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.id == resource.data.id) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
-
-      match /addresses/{addressId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
-        allow delete: if isExistingOwner(userId) || isAdmin();
-      }
-
-      match /carts/{cartId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
-        allow delete: if isExistingOwner(userId) || isAdmin();
-
-        match /items/{cartItemId} {
-          allow get, list: if isOwner(userId) || isAdmin();
-          allow create, update, delete: if isOwner(userId) || isAdmin();
-        }
-      }
-
-      match /orders/{orderId} {
-        allow get, list: if isOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid) || isAdmin();
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) || (isDeliveryAgent() && resource.data.deliveryAgentId == request.auth.uid) || isAdmin();
-        allow delete: if isAdmin();
-
-        match /items/{orderItemId} {
-          allow get, list: if isOwner(userId) || isDeliveryAgent() || isAdmin();
-          allow create: if isOwner(userId);
-          allow update, delete: if isAdmin();
-        }
-      }
-
-      match /shopping_lists/{listId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
-        allow delete: if isExistingOwner(userId) || isAdmin();
-
-        match /items/{listItemId} {
-          allow get, list: if isOwner(userId) || isAdmin();
-          allow create, update, delete: if isOwner(userId) || isAdmin();
-        }
-      }
-    }
-
-    /**
-     * @description Public Product Catalog.
-     */
-    match /products/{productId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /categories/{categoryId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
     }
 
     /**
@@ -105,12 +45,25 @@ service cloud.firestore {
     match /deliveryAgents/{agentId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin() || isOwner(agentId);
-      allow update: if isExistingOwner(agentId) || isAdmin();
+      allow update: if isOwner(agentId) || isAdmin();
       allow delete: if isAdmin();
     }
 
     /**
-     * @description Role tracking collections.
+     * @description Product Catalog.
+     */
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /**
+     * @description Role tracking (internal).
      */
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
