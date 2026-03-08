@@ -53,7 +53,14 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
   if (!isClient) return null;
 
-  // Show a clean loading state while determining auth/profile status to prevent layout jumps or flashes
+  const navItems = [
+    { name: 'Home', href: '/dashboard/customer', icon: HomeIcon },
+    { name: 'Categories', href: '/dashboard/customer/categories', icon: LayoutGrid },
+    { name: 'Favorites', href: '/dashboard/customer/favorites', icon: Heart },
+    { name: 'Orders', href: '/dashboard/customer/orders', icon: Package },
+  ];
+
+  // Show a clean loading state while determining auth/profile status to prevent layout flashes
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
