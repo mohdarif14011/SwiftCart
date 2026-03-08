@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect, useState, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as Use
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { useAuth, useFirestore, useDoc, useUser } from '@/firebase';
+import { useAuth, useFirestore, useDoc, useUser, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
@@ -20,14 +21,18 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const { user: firebaseUser, isUserLoading } = useUser();
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => { setIsClient(true); }, []);
+  useEffect(() => { 
+    setIsClient(true); 
+  }, []);
 
-  const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
+  const userProfileRef = useMemoFirebase(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
+    // Wait for all essential states to be determined before making navigation decisions
     if (!isClient || isUserLoading || isProfileLoading) return;
 
+    // 1. Authentication Gate
     if (!firebaseUser) {
       router.replace('/auth/customer');
       return;
@@ -35,9 +40,14 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
     const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
 
+    // 2. Profile Gate: Force onboarding only if the profile is missing and they aren't already there.
+    // This ensures the "Delivery Info" page is presented as the first step for new users.
     if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
     }
+    
+    // Note: We intentionally don't redirect OUT of onboarding if a profile exists here
+    // to allow users to manually edit their profile/address if they wish.
   }, [isClient, firebaseUser, isUserLoading, profile, isProfileLoading, pathname, router]);
 
   const handleLogout = async () => {
@@ -55,7 +65,8 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
   if (!isClient) return null;
 
-  if (isUserLoading || (isProfileLoading && pathname !== '/dashboard/customer/onboarding')) {
+  // Global loading state prevents layout shifts and redundant redirects during page refresh
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -63,6 +74,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // Standard layouts for full-screen specialized views
   if (pathname === '/dashboard/customer/onboarding' || pathname === '/dashboard/customer/cart') {
     return <main className="min-h-screen bg-white">{children}</main>;
   }
