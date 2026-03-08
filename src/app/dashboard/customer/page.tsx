@@ -422,57 +422,75 @@ export default function CustomerDashboard() {
         <>
           {/* Header */}
           {(currentView === 'home' || currentView === 'categories') && (
-            <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex items-center gap-4">
-              {currentView !== 'home' && (
-                <button 
-                  onClick={() => setCurrentView('home')} 
-                  className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
-                >
-                  <ArrowLeft className="h-6 w-6 text-slate-900" />
-                </button>
-              )}
-              
-              <h1 className="text-xl font-black text-slate-900 whitespace-nowrap hidden sm:block">
-                {currentView === 'home' ? 'SwiftCart' : 'Categories'}
-              </h1>
+            <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 overflow-hidden flex-1">
+                  {currentView !== 'home' && (
+                    <button 
+                      onClick={() => setCurrentView('home')} 
+                      className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+                    >
+                      <ArrowLeft className="h-6 w-6 text-slate-900" />
+                    </button>
+                  )}
+                  
+                  <div 
+                    className="flex flex-col cursor-pointer min-w-0" 
+                    onClick={() => setCurrentView('onboarding-map')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
+                      <ChevronDown className="h-3 w-3 text-slate-400" />
+                    </div>
+                    <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
+                      {profile?.address || 'Set delivery location'}
+                    </span>
+                  </div>
+                </div>
 
-              <div className="relative flex-1">
+                <div className="flex items-center gap-1 shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
+                        <UserIcon className="h-5 w-5 text-slate-700" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl w-48">
+                      <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {firebaseUser?.displayName || user?.name || 'My Profile'}
+                      </div>
+                      <Separator className="my-1" />
+                      <DropdownMenuItem onClick={() => setCurrentView('onboarding-map')} className="font-bold cursor-pointer">
+                        <MapPin className="h-4 w-4 mr-2" /> Edit Location
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
+                        <Package className="h-4 w-4 mr-2" /> My Orders
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
+                        <LogOut className="h-4 w-4 mr-2" /> Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <button onClick={() => setCurrentView('cart')} className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
+                     <ShoppingCart className="h-6 w-6" />
+                     {cart.length > 0 && (
+                        <span className="absolute top-1 right-1 bg-primary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                          {cart.length}
+                        </span>
+                     )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
                   placeholder='Search groceries...' 
-                  className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm focus-visible:ring-primary"
+                  className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button onClick={() => setCurrentView('cart')} className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-full">
-                   <ShoppingCart className="h-6 w-6" />
-                   {cart.length > 0 && <span className="absolute top-0 right-0 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{cart.length}</span>}
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10 shrink-0">
-                      <UserIcon className="h-5 w-5 text-slate-700" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-xl w-48">
-                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      {firebaseUser?.displayName || user?.name || 'My Profile'}
-                    </div>
-                    <Separator className="my-1" />
-                    <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
-                      <MapPin className="h-4 w-4 mr-2" /> Edit Location
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
-                      <Package className="h-4 w-4 mr-2" /> My Orders
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
-                      <LogOut className="h-4 w-4 mr-2" /> Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </header>
           )}
