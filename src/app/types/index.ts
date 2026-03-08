@@ -16,6 +16,8 @@ export interface Product {
   inventory: number;
   imageUrl: string;
   description: string;
+  weight?: number;
+  unit?: 'g' | 'kg';
 }
 
 export interface DeliveryAgent {
@@ -35,6 +37,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl: string;
+  weight?: number;
+  unit?: 'g' | 'kg';
 }
 
 export type OrderStatus = 'CONFIRMED' | 'PREPARING' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED';

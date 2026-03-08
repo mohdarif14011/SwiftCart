@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -112,7 +113,6 @@ export default function CustomerDashboard() {
     setIsClient(true);
   }, []);
 
-  // Sync Firebase User to Store
   useEffect(() => {
     if (firebaseUser && !user) {
       setUser({
@@ -124,7 +124,6 @@ export default function CustomerDashboard() {
     }
   }, [firebaseUser, user, setUser]);
 
-  // Handle Redirection of unauthenticated users in an Effect to avoid render-time updates
   useEffect(() => {
     if (!isUserLoading && !firebaseUser) {
       router.replace('/auth/customer');
@@ -134,17 +133,14 @@ export default function CustomerDashboard() {
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
-  // Robust onboarding check
   useEffect(() => {
     if (!isClient || isUserLoading || isProfileLoading || hasDismissedOnboarding) return;
 
-    // Automatically show onboarding if profile is missing
     if (!profile && firebaseUser && currentView === 'home' && !isManualNavigation) {
       setCurrentView('onboarding-map');
       handleAutoLocate();
     }
     
-    // Automatically exit onboarding if profile is detected (e.g. after slow load or refresh)
     if (profile && (currentView === 'onboarding-map' || currentView === 'onboarding-details') && !isManualNavigation) {
       setCurrentView('home');
     }
@@ -288,12 +284,10 @@ export default function CustomerDashboard() {
     );
   }
 
-  // Final check to prevent rendering dashboard if not logged in
   if (!firebaseUser) return null;
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
-      {/* Onboarding View */}
       {(currentView === 'onboarding-map' || currentView === 'onboarding-details') && (
         <div className="flex flex-col h-screen bg-white">
           {currentView === 'onboarding-map' ? (
@@ -420,10 +414,8 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Main App Views */}
       {['home', 'categories', 'favorites', 'cart', 'order-success', 'orders'].includes(currentView) && (
         <>
-          {/* Header */}
           <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 overflow-hidden flex-1">
@@ -477,7 +469,6 @@ export default function CustomerDashboard() {
             </div>
           </header>
 
-          {/* Views */}
           {currentView === 'home' && (
             <main className="flex-1 overflow-x-hidden">
               <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white border-b border-slate-50">
@@ -547,7 +538,6 @@ export default function CustomerDashboard() {
             </main>
           )}
 
-          {/* Bottom Nav */}
           <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
             <button onClick={() => { setCurrentView('home'); setActiveCategory('All'); }} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
               <HomeIcon className="h-6 w-6" />
@@ -602,7 +592,10 @@ export default function CustomerDashboard() {
                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
                     {cart.map(item => (
                       <div key={item.productId} className="flex justify-between items-center">
-                        <span className="font-bold">{item.name} x{item.quantity}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold">{item.name} x{item.quantity}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-black">{item.weight ? `${item.weight}${item.unit}` : ''}</span>
+                        </div>
                         <span className="font-black text-primary">₹{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
@@ -668,7 +661,12 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
         )}
       </div>
       <div className="flex flex-col px-1 gap-1">
-        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8">{product.name}</h4>
+        <div className="flex items-center justify-between gap-1">
+          <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8 flex-1">{product.name}</h4>
+          {product.weight && (
+            <span className="text-[10px] font-black text-slate-400 whitespace-nowrap">{product.weight}{product.unit}</span>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <div className="flex items-center">{[1, 2, 3, 4, 5].map((s) => (<Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />))}</div>
         </div>

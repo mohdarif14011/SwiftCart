@@ -99,6 +99,13 @@
         },
         "category": {
           "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["g", "kg"]
         }
       },
       "required": [

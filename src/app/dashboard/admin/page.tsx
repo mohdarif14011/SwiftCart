@@ -22,7 +22,8 @@ import {
   Mail,
   Lock,
   Phone,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Weight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -65,6 +66,8 @@ export default function AdminDashboard() {
     category: '', 
     price: '', 
     imageUrl: '',
+    weight: '',
+    unit: 'g' as 'g' | 'kg',
     isInStock: true 
   });
   
@@ -132,14 +135,16 @@ export default function AdminDashboard() {
       name: prodForm.name,
       category: prodForm.category,
       price: parseFloat(prodForm.price),
-      inventory: prodForm.isInStock ? 99 : 0, // Using inventory 0 for out of stock
+      inventory: prodForm.isInStock ? 99 : 0,
       imageUrl: prodForm.imageUrl || `https://picsum.photos/seed/${prodForm.name}/300/300`,
-      description: `Freshly stocked ${prodForm.name}`
+      description: `Freshly stocked ${prodForm.name}`,
+      weight: prodForm.weight ? parseFloat(prodForm.weight) : undefined,
+      unit: prodForm.unit
     };
 
     setProducts([...products, newProduct]);
     toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
-    setProdForm({ name: '', category: '', price: '', imageUrl: '', isInStock: true });
+    setProdForm({ name: '', category: '', price: '', imageUrl: '', weight: '', unit: 'g', isInStock: true });
     setIsAddingProduct(false);
   };
 
@@ -253,8 +258,7 @@ export default function AdminDashboard() {
                 <Truck className="h-6 w-6 text-blue-500 opacity-20" />
               </CardTitle>
             </CardHeader>
-          </Card>
-        </div>
+          </div>
 
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
@@ -306,16 +310,43 @@ export default function AdminDashboard() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="price">Price ($)</Label>
-                        <Input 
-                          id="price" 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="4.99" 
-                          value={prodForm.price}
-                          onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="price">Price ($)</Label>
+                          <Input 
+                            id="price" 
+                            type="number" 
+                            step="0.01" 
+                            placeholder="4.99" 
+                            value={prodForm.price}
+                            onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="weight">Weight</Label>
+                          <div className="flex gap-2">
+                            <Input 
+                              id="weight" 
+                              type="number" 
+                              placeholder="500" 
+                              className="flex-1"
+                              value={prodForm.weight}
+                              onChange={(e) => setProdForm({...prodForm, weight: e.target.value})}
+                            />
+                            <Select 
+                              onValueChange={(val) => setProdForm({...prodForm, unit: val as 'g' | 'kg'})}
+                              value={prodForm.unit}
+                            >
+                              <SelectTrigger className="w-20">
+                                <SelectValue placeholder="Unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="g">g</SelectItem>
+                                <SelectItem value="kg">kg</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="imageUrl">Product Image URL</Label>
@@ -370,6 +401,7 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableHead>Product</TableHead>
                         <TableHead>Category</TableHead>
+                        <TableHead>Weight</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -390,6 +422,9 @@ export default function AdminDashboard() {
                             <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
                               {product.category}
                             </span>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
                           </TableCell>
                           <TableCell>${product.price.toFixed(2)}</TableCell>
                           <TableCell>
