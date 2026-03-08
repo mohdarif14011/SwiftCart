@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -101,7 +100,9 @@ export default function AdminProducts() {
     setIsSavingProduct(true);
     
     const productId = editingProduct?.id || Math.random().toString(36).substr(2, 9);
-    const productData: Product = {
+    
+    // Construct base product data
+    const productData: any = {
       id: productId,
       name: prodForm.name,
       category: prodForm.category,
@@ -109,10 +110,17 @@ export default function AdminProducts() {
       inventory: prodForm.isInStock ? 99 : 0,
       imageUrl: prodForm.imageUrl || '',
       description: `Freshly stocked ${prodForm.name}`,
-      weight: prodForm.weight ? parseFloat(prodForm.weight) : undefined,
       unit: prodForm.unit,
-      offerPercentage: prodForm.offerPercentage ? parseFloat(prodForm.offerPercentage) : undefined
     };
+
+    // Only add optional numeric fields if they have a value to avoid 'undefined' errors in Firestore
+    if (prodForm.weight !== '' && !isNaN(parseFloat(prodForm.weight))) {
+      productData.weight = parseFloat(prodForm.weight);
+    }
+    
+    if (prodForm.offerPercentage !== '' && !isNaN(parseFloat(prodForm.offerPercentage))) {
+      productData.offerPercentage = parseFloat(prodForm.offerPercentage);
+    }
 
     setDocumentNonBlocking(doc(db, 'products', productId), productData, { merge: true });
     
