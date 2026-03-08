@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -46,34 +45,34 @@ export default function CustomerShop() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white border-b border-slate-50">
+      <div className="flex items-center gap-4 overflow-x-auto px-4 py-4 no-scrollbar bg-white">
         {CATEGORIES.map((cat) => (
-          <button key={cat.name} onClick={() => setActiveCategory(cat.name)} className="flex flex-col items-center gap-2 min-w-[70px]">
-            <div className={cn("p-3 rounded-2xl transition-all", activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-500")}>
-              <cat.icon className="h-6 w-6" />
+          <button key={cat.name} onClick={() => setActiveCategory(cat.name)} className="flex flex-col items-center gap-1.5 min-w-[65px]">
+            <div className={cn("p-2.5 rounded-2xl transition-all", activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-500")}>
+              <cat.icon className="h-5 w-5" />
             </div>
-            <span className={cn("text-[11px] font-semibold", activeCategory === cat.name ? "text-primary" : "text-slate-400")}>{cat.name}</span>
+            <span className={cn("text-[10px] font-bold uppercase tracking-tight", activeCategory === cat.name ? "text-primary" : "text-slate-400")}>{cat.name}</span>
           </button>
         ))}
       </div>
 
-      <div className="px-4 py-4 space-y-8">
+      <div className="px-4 py-2 space-y-6">
         {activeCategory === 'All' && !searchQuery ? (
           Object.entries(groupedProducts).map(([category, items]) => (
-            <section key={category} className="space-y-4">
+            <section key={category} className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">{category}</h2>
-                <button onClick={() => setActiveCategory(category)} className="text-primary text-sm font-semibold">View all</button>
+                <h2 className="text-lg font-bold text-slate-900 leading-tight">{category}</h2>
+                <button onClick={() => setActiveCategory(category)} className="text-primary text-sm font-bold">View all</button>
               </div>
-              <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+              <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
                 {items.map(product => <ProductCard key={product.id} product={product} layout="horizontal" />)}
               </div>
             </section>
           ))
         ) : (
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">{activeCategory === 'All' ? 'Search Results' : activeCategory}</h2>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-12">
+            <h2 className="text-lg font-bold text-slate-900">{activeCategory === 'All' ? 'Search Results' : activeCategory}</h2>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10">
               {filteredProducts.map(product => <ProductCard key={product.id} product={product} layout="grid" />)}
             </div>
             {filteredProducts.length === 0 && (
@@ -92,9 +91,8 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
   const isFavorite = favorites.includes(product.id);
 
   return (
-    <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[150px] max-w-[150px]' : 'w-full')}>
-      {/* Image Container */}
-      <div className="relative aspect-square bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50">
+    <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[145px] max-w-[145px]' : 'w-full')}>
+      <div className="relative aspect-square bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-3 mb-2 border border-slate-100/50">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
@@ -102,57 +100,55 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
         />
         <button 
           onClick={() => toggleFavorite(product.id)} 
-          className={cn("absolute top-4 right-4 transition-colors z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-400 hover:text-red-400')}
+          className={cn("absolute top-3 right-3 transition-colors z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-400 hover:text-red-400')}
         >
           <Heart className={cn("h-4 w-4", isFavorite && 'fill-current')} />
         </button>
       </div>
       
-      {/* Product Details */}
-      <div className="flex flex-col px-1 gap-1">
+      <div className="flex flex-col px-1 gap-0.5">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1 text-slate-400">
-            <Clock className="h-3 w-3" />
-            <span className="text-[10px] font-bold">9 mins</span>
+            <Clock className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-bold">9 mins</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
             {product.weight}{product.unit}
           </span>
         </div>
         
         <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
         
-        <div className="flex items-center gap-2 mt-0.5 mb-2">
+        <div className="flex items-center gap-1.5 mt-0.5 mb-1.5">
           <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
-          <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
+          <span className="text-[9px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
-              {product.offerPercentage}% off
+            <span className="text-[9px] font-bold text-green-600 ml-auto bg-green-50 px-1 py-0.5 rounded">
+              {product.offerPercentage}%
             </span>
           )}
         </div>
       </div>
 
-      {/* Action Area Below the Card */}
       <div className="mt-auto">
         {!cartItem ? (
           <Button 
             onClick={() => addToCart(product)} 
-            className="w-full h-10 rounded-2xl bg-white text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all font-bold text-xs"
+            className="w-full h-9 rounded-2xl bg-white text-primary border border-primary/10 hover:bg-primary hover:text-white transition-all font-bold text-xs"
           >
             ADD
           </Button>
         ) : (
-          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-10 shadow-sm">
+          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-9 shadow-sm">
             <button 
               className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
               onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3 w-3" />
             </button>
-            <div className="px-2 flex flex-col items-center justify-center min-w-[40px]">
+            <div className="px-1 flex flex-col items-center justify-center min-w-[35px]">
               <span className="text-xs font-bold">{cartItem.quantity}</span>
-              <span className="text-[8px] font-medium opacity-80 leading-none">
+              <span className="text-[7px] font-medium opacity-80 leading-none">
                 {product.unit === 'kg' ? `${cartItem.quantity * (product.weight || 1)}kg` : `${cartItem.quantity * (product.weight || 1)}g`}
               </span>
             </div>
@@ -160,7 +156,7 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
               className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
               onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </button>
           </div>
         )}

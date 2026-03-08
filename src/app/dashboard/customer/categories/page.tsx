@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -35,21 +34,21 @@ export default function CustomerCategories() {
   }, [products, activeCategory, localSearch]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] bg-white overflow-hidden">
-      <div className="px-6 py-4 flex items-center gap-4 border-b border-slate-50 shrink-0">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-50 shrink-0">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => router.back()} 
-          className="h-9 w-9 rounded-xl bg-slate-50 hover:bg-slate-100 shrink-0"
+          className="h-8 w-8 rounded-xl bg-slate-50 hover:bg-slate-100 shrink-0"
         >
           <ArrowLeft className="h-4 w-4 text-slate-900" />
         </Button>
-        <h1 className="text-xl font-bold text-slate-900">Browse Categories</h1>
+        <h1 className="text-lg font-bold text-slate-900">Categories</h1>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-20 sm:w-24 flex-shrink-0 border-r border-slate-50 bg-slate-50/50 overflow-y-auto no-scrollbar">
+        <aside className="w-20 flex-shrink-0 border-r border-slate-50 bg-slate-50/30 overflow-y-auto no-scrollbar">
           {CATEGORIES.map((cat) => (
             <button 
               key={cat.name} 
@@ -58,7 +57,7 @@ export default function CustomerCategories() {
                 setLocalSearch(''); 
               }} 
               className={cn(
-                "w-full flex flex-col items-center gap-2 py-5 px-1 transition-all relative",
+                "w-full flex flex-col items-center gap-1.5 py-4 px-1 transition-all relative",
                 activeCategory === cat.name 
                   ? "bg-white text-primary" 
                   : "text-slate-400 hover:text-slate-600"
@@ -68,47 +67,46 @@ export default function CustomerCategories() {
                 <div className="absolute right-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-l-full" />
               )}
               <div className={cn(
-                "p-2.5 rounded-xl transition-colors",
+                "p-2 rounded-xl transition-colors",
                 activeCategory === cat.name ? "bg-primary/10" : "bg-transparent"
               )}>
-                <cat.icon className="h-5 w-5" />
+                <cat.icon className="h-4 w-4" />
               </div>
-              <span className="text-[10px] font-semibold text-center uppercase tracking-wider leading-tight px-1">
+              <span className="text-[9px] font-bold text-center uppercase tracking-tight leading-tight px-1">
                 {cat.name}
               </span>
             </button>
           ))}
         </aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/20">
-          <div className="p-4 border-b border-slate-50 bg-white shrink-0 space-y-4">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-slate-50 bg-white shrink-0 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">{activeCategory}</h2>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{filteredProducts.length} items</span>
+              <h2 className="text-base font-bold text-slate-900 leading-tight">{activeCategory}</h2>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{filteredProducts.length} items</span>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input 
-                placeholder={`Search in ${activeCategory.toLowerCase()}...`}
-                className="w-full pl-9 bg-slate-50 border-none rounded-xl h-10 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                placeholder={`Search ${activeCategory}...`}
+                className="w-full pl-9 bg-slate-50 border-none rounded-xl h-9 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-50/20">
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-12 pb-20">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-10 pb-20">
                 {filteredProducts.map(product => (
                   <ProductItem key={product.id} product={product} />
                 ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <CookingPot className="h-10 w-10 mb-4 text-slate-300" />
-                <p className="font-semibold text-sm text-slate-900">No items found</p>
-                <p className="text-[10px] font-medium text-slate-400">Try a different search</p>
+                <CookingPot className="h-8 w-8 mb-3 text-slate-300" />
+                <p className="font-bold text-sm text-slate-900">No items found</p>
               </div>
             )}
           </div>
@@ -125,8 +123,7 @@ function ProductItem({ product }: { product: any }) {
 
   return (
     <div className="flex flex-col w-full group">
-      {/* Image Container */}
-      <div className="relative aspect-square bg-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50 shadow-sm">
+      <div className="relative aspect-square bg-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-3 mb-2 border border-slate-100/50 shadow-sm">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
@@ -140,42 +137,40 @@ function ProductItem({ product }: { product: any }) {
         </button>
       </div>
 
-      {/* Details Container */}
-      <div className="flex flex-col px-1 gap-1">
+      <div className="flex flex-col px-1 gap-0.5">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1 text-slate-400">
-            <Clock className="h-3 w-3" />
-            <span className="text-[10px] font-bold">9 mins</span>
+            <Clock className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-bold">9 mins</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
             {product.weight}{product.unit}
           </span>
         </div>
         
         <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
         
-        <div className="flex items-center gap-2 mt-0.5 mb-2">
+        <div className="flex items-center gap-1.5 mt-0.5 mb-1.5">
           <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
-          <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
+          <span className="text-[9px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
-              {product.offerPercentage}% off
+            <span className="text-[9px] font-bold text-green-600 ml-auto bg-green-50 px-1 py-0.5 rounded">
+              {product.offerPercentage}%
             </span>
           )}
         </div>
       </div>
 
-      {/* Action Area Below the Card */}
       <div className="mt-auto">
         {!cartItem ? (
           <Button 
             onClick={() => addToCart(product)} 
-            className="w-full h-10 rounded-2xl bg-white text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all font-bold text-xs"
+            className="w-full h-9 rounded-2xl bg-white text-primary border border-primary/10 hover:bg-primary hover:text-white transition-all font-bold text-xs"
           >
             ADD
           </Button>
         ) : (
-          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-10 shadow-sm">
+          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-9 shadow-sm">
             <button 
               className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
               onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
@@ -184,7 +179,7 @@ function ProductItem({ product }: { product: any }) {
             </button>
             <div className="px-1 flex flex-col items-center justify-center min-w-[35px]">
               <span className="text-xs font-bold">{cartItem.quantity}</span>
-              <span className="text-[7px] font-medium opacity-80 leading-none uppercase">
+              <span className="text-[7px] font-medium opacity-80 leading-none">
                 {product.unit === 'kg' ? `${cartItem.quantity * (product.weight || 1)}kg` : `${cartItem.quantity * (product.weight || 1)}g`}
               </span>
             </div>
