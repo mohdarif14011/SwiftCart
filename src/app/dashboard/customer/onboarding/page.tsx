@@ -4,16 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, ArrowLeft, Loader2, ChevronRight, Navigation } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, Navigation, Info } from 'lucide-react';
 import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const FALLBACK_LAT = 25.4358;
 const FALLBACK_LNG = 81.8463;
 
 export default function CustomerOnboarding() {
-  const [view, setView] = useState<'map' | 'details'>('map');
   const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locating, setLocating] = useState(false);
   const [form, setForm] = useState({ phone: '', address: '', nearby: '' });
@@ -26,6 +26,7 @@ export default function CustomerOnboarding() {
   const userProfileRef = useMemoFirebase(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile } = useDoc(userProfileRef);
 
+  // Automatically locate on mount
   useEffect(() => {
     handleAutoLocate();
   }, []);
@@ -51,11 +52,14 @@ export default function CustomerOnboarding() {
         (pos) => { 
           setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
           setLocating(false); 
+          toast({ title: "Location Captured", description: "Your current coordinates have been pinned automatically." });
         },
         () => { 
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG }); 
-          setLocating(false); 
-        }
+          setLocating(false);
+          toast({ variant: "destructive", title: "Location Error", description: "Using default city coordinates. Please ensure GPS is on." });
+        },
+        { enableHighAccuracy: true }
       );
     } else {
       setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
@@ -85,77 +89,98 @@ export default function CustomerOnboarding() {
     };
 
     setDocumentNonBlocking(doc(db, 'customers', firebaseUser.uid), profileData, { merge: true });
-    toast({ title: "Profile Updated", description: "Your changes have been saved." });
+    toast({ title: "Profile Updated", description: "Your delivery details are now ready." });
     router.push('/dashboard/customer');
     setSaving(false);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {view === 'map' ? (
-        <>
-          <div className="p-8 space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pin Your House</h1>
-            <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
+    <div className="flex flex-col min-h-screen bg-white p-6 sm:p-10 max-w-xl mx-auto">
+      <div className="flex flex-col gap-8">
+        <div className="space-y-4">
+          <button 
+            onClick={() => router.back()} 
+            className="p-2 -ml-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors w-fit"
+          >
+            <ArrowLeft className="h-6 w-6 text-slate-900" />
+          </button>
+          
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Delivery Info</h1>
+            <p className="text-slate-500 font-medium">We've pinned your location. Just add your details.</p>
           </div>
-          <div className="flex-1 relative bg-slate-100 overflow-hidden">
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=18&output=embed`}
-              className="w-full h-full grayscale opacity-70"
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-8 ring-primary/10">
-                <MapPin className="h-7 w-7 text-white" />
-              </div>
+        </div>
+
+        <div className="bg-primary/5 rounded-3xl p-5 border border-primary/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary/10 rounded-2xl">
+              <MapPin className="h-5 w-5 text-primary" />
             </div>
-            <Button variant="outline" className="absolute bottom-8 right-8 rounded-full h-16 w-16 bg-white shadow-2xl p-0 border-none" onClick={handleAutoLocate} disabled={locating}>
-              {locating ? <Loader2 className="h-7 w-7 animate-spin" /> : <Navigation className="h-7 w-7 text-primary" />}
-            </Button>
-          </div>
-          <div className="p-8 bg-white border-t border-slate-50 shadow-2xl">
-            <div className="flex gap-4">
-              <Button variant="ghost" className="h-16 w-16 rounded-full bg-slate-100 p-0" onClick={() => router.back()}>
-                <ArrowLeft className="h-6 w-6 text-slate-900" />
-              </Button>
-              <Button className="flex-1 h-16 text-lg font-bold rounded-[2rem]" onClick={() => setView('details')} disabled={!gpsLocation}>
-                Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">GPS Location</p>
+              <p className="text-xs font-bold text-slate-900">
+                {locating ? "Locating you..." : gpsLocation ? "Pinned Automatically" : "Waiting for GPS..."}
+              </p>
             </div>
           </div>
-        </>
-      ) : (
-        <div className="flex flex-col h-screen p-8 space-y-10 overflow-y-auto">
-          <div className="space-y-4">
-            <button onClick={() => setView('map')} className="p-2 -ml-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"><ArrowLeft className="h-6 w-6 text-slate-900" /></button>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Delivery Info</h1>
-              <p className="text-slate-500 font-medium">Finalize your delivery details.</p>
-            </div>
-          </div>
-          <div className="space-y-8">
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Street Address</label>
-              <Input placeholder="House No, Area, City" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} />
-            </div>
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Mobile Number</label>
-              <Input placeholder="e.g. +91 98765 43210" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} />
-            </div>
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Landmark (Optional)</label>
-              <Input placeholder="Near central park, etc." className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.nearby} onChange={(e) => setForm({...form, nearby: e.target.value})} />
-            </div>
-          </div>
-          <div className="flex-1" />
-          <Button className="w-full h-16 text-lg font-bold rounded-[2rem] bg-primary mb-2 shadow-xl shadow-primary/20" onClick={handleComplete} disabled={saving}>
-            {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Save Changes"}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-10 w-10 rounded-full hover:bg-white" 
+            onClick={handleAutoLocate}
+            disabled={locating}
+          >
+            {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-primary" />}
           </Button>
         </div>
-      )}
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Street Address</label>
+            <Input 
+              placeholder="House No, Building Name, Street" 
+              className="h-14 bg-slate-50 border-none rounded-2xl text-base font-semibold px-5 focus-visible:ring-1 focus-visible:ring-primary shadow-none" 
+              value={form.address} 
+              onChange={(e) => setForm({...form, address: e.target.value})} 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Mobile Number</label>
+            <Input 
+              placeholder="e.g. +91 98765 43210" 
+              className="h-14 bg-slate-50 border-none rounded-2xl text-base font-semibold px-5 focus-visible:ring-1 focus-visible:ring-primary shadow-none" 
+              value={form.phone} 
+              onChange={(e) => setForm({...form, phone: e.target.value})} 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Landmark (Optional)</label>
+            <Input 
+              placeholder="Near park, grocery store, etc." 
+              className="h-14 bg-slate-50 border-none rounded-2xl text-base font-semibold px-5 focus-visible:ring-1 focus-visible:ring-primary shadow-none" 
+              value={form.nearby} 
+              onChange={(e) => setForm({...form, nearby: e.target.value})} 
+            />
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <Button 
+            className="w-full h-16 text-lg font-bold rounded-[2rem] bg-primary shadow-xl shadow-primary/20 hover:scale-[0.98] transition-transform" 
+            onClick={handleComplete} 
+            disabled={saving || locating}
+          >
+            {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Save & Continue"}
+          </Button>
+          
+          <div className="flex items-center justify-center gap-2 mt-6 text-slate-400">
+            <Info className="h-3 w-3" />
+            <p className="text-[10px] font-bold uppercase tracking-widest">Secure Checkout Enabled</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
