@@ -67,7 +67,8 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (pathname === '/dashboard/customer/onboarding') {
+  // Early return for pages that should not show the header or the footer (Onboarding and Cart)
+  if (pathname === '/dashboard/customer/onboarding' || pathname === '/dashboard/customer/cart') {
     return <main className="min-h-screen bg-white">{children}</main>;
   }
 
