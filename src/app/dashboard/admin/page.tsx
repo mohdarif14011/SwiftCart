@@ -1,928 +1,113 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Search, 
-  Package, 
-  DollarSign, 
-  LogOut,
-  Users,
-  Truck,
-  UserPlus,
-  Loader2,
-  Mail,
-  Lock,
-  Phone,
-  Image as ImageIcon,
-  Tag,
-  ClipboardList,
-  CheckCircle,
-  Clock,
-  LayoutGrid
-} from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { firebaseConfig } from '@/firebase/config';
-import { useToast } from '@/hooks/use-toast';
-import { Product, Order } from '@/app/types';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Package, DollarSign, ClipboardList, Truck, TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
-const CATEGORIES = [
-  'Vegetables',
-  'Fruits',
-  'Dairy',
-  'Bakery',
-  'Snacks',
-  'Home Essentials',
-  'Kitchen Essentials',
-];
-
-export default function AdminDashboard() {
-  const { products, setProducts, updateProduct, setUser } = useAppStore();
-  const [productSearch, setProductSearch] = useState('');
-  const [agentSearch, setAgentSearch] = useState('');
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [orderSearch, setOrderSearch] = useState('');
-  
-  const [isSavingProduct, setIsSavingProduct] = useState(false);
-  const [isAddingAgent, setIsAddingAgent] = useState(false);
-  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
-
-  const router = useRouter();
+export default function AdminOverview() {
+  const { products } = useAppStore();
   const db = useFirestore();
-  const { toast } = useToast();
 
-  // Form states for adding/editing product
-  const [prodForm, setProdForm] = useState({ 
-    name: '', 
-    category: '', 
-    price: '', 
-    imageUrl: '',
-    weight: '',
-    unit: 'g' as 'g' | 'kg',
-    isInStock: true,
-    offerPercentage: ''
-  });
-  
-  // Form states for adding agent
-  const [agentForm, setAgentForm] = useState({ 
-    email: '', 
-    password: '', 
-    firstName: '', 
-    lastName: '', 
-    phone: '' 
-  });
-
-  // Real-time collections
-  const customersQuery = useMemoFirebase(() => collection(db, 'customers'), [db]);
-  const agentsQuery = useMemoFirebase(() => collection(db, 'deliveryAgents'), [db]);
   const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  const agentsQuery = useMemoFirebase(() => collection(db, 'deliveryAgents'), [db]);
   
-  const { data: customers } = useCollection(customersQuery);
-  const { data: agents } = useCollection(agentsQuery);
   const { data: remoteOrders } = useCollection(ordersQuery);
+  const { data: agents } = useCollection(agentsQuery);
 
-  // Filtered Lists
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => 
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
-      p.category.toLowerCase().includes(productSearch.toLowerCase())
-    );
-  }, [products, productSearch]);
-
-  const filteredAgents = useMemo(() => {
-    if (!agents) return [];
-    return agents.filter(a => 
-      `${a.firstName} ${a.lastName}`.toLowerCase().includes(agentSearch.toLowerCase()) ||
-      a.email.toLowerCase().includes(agentSearch.toLowerCase())
-    );
-  }, [agents, agentSearch]);
-
-  const filteredCustomers = useMemo(() => {
-    if (!customers) return [];
-    return customers.filter(c => 
-      `${c.firstName} ${c.lastName}`.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      c.email.toLowerCase().includes(customerSearch.toLowerCase())
-    );
-  }, [customers, customerSearch]);
-
-  const filteredOrders = useMemo(() => {
-    if (!remoteOrders) return [];
-    return remoteOrders.filter(o => 
-      o.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
-      o.address.toLowerCase().includes(orderSearch.toLowerCase())
-    );
-  }, [remoteOrders, orderSearch]);
-
-  const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
-    toast({ title: "Product Removed", description: "The item has been removed from the catalog." });
-  };
-
-  const handleEditProductClick = (product: Product) => {
-    setEditingProduct(product);
-    setProdForm({
-      name: product.name,
-      category: product.category,
-      price: product.price.toString(),
-      imageUrl: product.imageUrl,
-      weight: product.weight?.toString() || '',
-      unit: product.unit || 'g',
-      isInStock: (product.inventory || 0) > 0,
-      offerPercentage: product.offerPercentage?.toString() || ''
-    });
-    setIsProductDialogOpen(true);
-  };
-
-  const handleOpenAddProduct = () => {
-    setEditingProduct(null);
-    setProdForm({ 
-      name: '', 
-      category: '', 
-      price: '', 
-      imageUrl: '', 
-      weight: '', 
-      unit: 'g', 
-      isInStock: true, 
-      offerPercentage: '' 
-    });
-    setIsProductDialogOpen(true);
-  };
-
-  const handleSaveProduct = () => {
-    if (!prodForm.name || !prodForm.category || !prodForm.price) {
-      toast({ variant: "destructive", title: "Error", description: "Name, Category, and Price are required." });
-      return;
-    }
-    
-    setIsSavingProduct(true);
-    
-    const productData: Product = {
-      id: editingProduct?.id || Math.random().toString(36).substr(2, 9),
-      name: prodForm.name,
-      category: prodForm.category,
-      price: parseFloat(prodForm.price),
-      inventory: prodForm.isInStock ? 99 : 0,
-      imageUrl: prodForm.imageUrl || `https://picsum.photos/seed/${prodForm.name}/300/300`,
-      description: `Freshly stocked ${prodForm.name}`,
-      weight: prodForm.weight ? parseFloat(prodForm.weight) : undefined,
-      unit: prodForm.unit,
-      offerPercentage: prodForm.offerPercentage ? parseFloat(prodForm.offerPercentage) : undefined
-    };
-
-    if (editingProduct) {
-      updateProduct(productData);
-      toast({ title: "Product Updated", description: `${prodForm.name} changes have been saved.` });
-    } else {
-      setProducts([...products, productData]);
-      toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
-    }
-
-    setIsSavingProduct(false);
-    setIsProductDialogOpen(false);
-    setEditingProduct(null);
-  };
-
-  const handleAddAgent = async () => {
-    if (!agentForm.email || !agentForm.password || !agentForm.firstName || !agentForm.lastName) {
-      toast({ variant: "destructive", title: "Error", description: "Email, Password, and Name are required." });
-      return;
-    }
-
-    setIsAddingAgent(true);
-    
-    let secondaryApp;
-    try {
-      secondaryApp = initializeApp(firebaseConfig, 'SecondaryOnboarding');
-      const secondaryAuth = getAuth(secondaryApp);
-      
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, agentForm.email, agentForm.password);
-      const uid = userCredential.user.uid;
-      
-      await signOut(secondaryAuth);
-      await deleteApp(secondaryApp);
-
-      setDocumentNonBlocking(doc(db, 'roles_delivery_agent', uid), {
-        assignedAt: new Date().toISOString(),
-        active: true
-      }, { merge: true });
-
-      setDocumentNonBlocking(doc(db, 'deliveryAgents', uid), {
-        id: uid,
-        firstName: agentForm.firstName,
-        lastName: agentForm.lastName,
-        email: agentForm.email,
-        phone: agentForm.phone,
-        status: 'Available',
-        vehicleType: 'E-Bike',
-        joinedAt: new Date().toISOString()
-      }, { merge: true });
-
-      toast({ title: "Agent Onboarded", description: `${agentForm.firstName} has been created and granted fleet access.` });
-      setAgentForm({ email: '', password: '', firstName: '', lastName: '', phone: '' });
-    } catch (error: any) {
-      console.error(error);
-      toast({ 
-        variant: "destructive", 
-        title: "Onboarding Failed", 
-        description: error.message || "Could not create agent account."
-      });
-      if (secondaryApp) {
-        try { await deleteApp(secondaryApp); } catch(e) {}
-      }
-    } finally {
-      setIsAddingAgent(false);
-    }
-  };
-
-  const handleAssignAgent = (agentId: string) => {
-    if (!assigningOrder) return;
-    
-    updateDocumentNonBlocking(doc(db, 'orders', assigningOrder.id), {
-      agentId: agentId,
-      status: 'PICKED_UP',
-      assignedAt: new Date().toISOString()
-    });
-
-    toast({ 
-      title: "Agent Assigned", 
-      description: `Order ${assigningOrder.id} has been dispatched.` 
-    });
-    setAssigningOrder(null);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    router.push('/');
-  };
-
-  const handleDeleteUser = (col: string, id: string) => {
-    deleteDocumentNonBlocking(doc(db, col, id));
-    if (col === 'deliveryAgents') {
-      deleteDocumentNonBlocking(doc(db, 'roles_delivery_agent', id));
-    }
-    toast({ title: "User Deleted", description: "The account and role have been revoked." });
-  };
+  const activeOrdersCount = remoteOrders?.filter(o => o.status !== 'DELIVERED').length || 0;
+  const totalRevenue = remoteOrders?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
+  const availableAgents = agents?.filter(a => a.status === 'Available').length || 0;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <nav className="h-16 bg-white border-b px-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary p-2 rounded-lg">
-            <Package className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold font-headline text-primary">SwiftCart Admin</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5 text-muted-foreground" />
-          </Button>
-        </div>
-      </nav>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold font-headline">Welcome back, Admin</h1>
+        <p className="text-muted-foreground">Here is what is happening with your store today.</p>
+      </div>
 
-      <main className="max-w-7xl mx-auto w-full p-4 sm:p-8 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Total Products</CardDescription>
-              <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                {products.length}
-                <Package className="h-6 w-6 text-primary opacity-20" />
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Active Orders</CardDescription>
-              <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                {filteredOrders.filter(o => o.status !== 'DELIVERED').length}
-                <ClipboardList className="h-6 w-6 text-accent opacity-20" />
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Inventory Value</CardDescription>
-              <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                ${products.reduce((acc, p) => acc + (p.price * (p.inventory || 0)), 0).toFixed(2)}
-                <DollarSign className="h-6 w-6 text-green-500 opacity-20" />
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Fleet Size</CardDescription>
-              <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                {agents?.length || 0}
-                <Truck className="h-6 w-6 text-blue-500 opacity-20" />
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs uppercase tracking-wider font-bold">Total Products</CardDescription>
+            <CardTitle className="text-3xl font-bold flex items-center justify-between">
+              {products.length}
+              <Package className="h-6 w-6 text-primary opacity-20" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs uppercase tracking-wider font-bold">Active Orders</CardDescription>
+            <CardTitle className="text-3xl font-bold flex items-center justify-between">
+              {activeOrdersCount}
+              <ClipboardList className="h-6 w-6 text-accent opacity-20" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs uppercase tracking-wider font-bold">Revenue Today</CardDescription>
+            <CardTitle className="text-3xl font-bold flex items-center justify-between">
+              ${totalRevenue.toFixed(2)}
+              <DollarSign className="h-6 w-6 text-green-500 opacity-20" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs uppercase tracking-wider font-bold">Available Fleet</CardDescription>
+            <CardTitle className="text-3xl font-bold flex items-center justify-between">
+              {availableAgents}
+              <Truck className="h-6 w-6 text-blue-500 opacity-20" />
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
 
-        <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
-            <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Products</TabsTrigger>
-            <TabsTrigger value="categories" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Categories</TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Orders</TabsTrigger>
-            <TabsTrigger value="fleet" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Customers</TabsTrigger>
-          </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" /> Store Performance
+            </CardTitle>
+            <CardDescription>Overview of recent sales and growth.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
+            <p className="text-sm italic">Analytics visualization coming soon.</p>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="products">
-            <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-2xl font-bold font-headline">Inventory</CardTitle>
-                  <CardDescription>Manage your store catalog</CardDescription>
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Clock className="h-5 w-5 text-accent" /> Recent Activity
+            </CardTitle>
+            <CardDescription>Latest events from your fleet and orders.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {remoteOrders?.slice(0, 4).map(order => (
+              <div key={order.id} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50">
+                <div className="bg-white p-2 rounded-full border shadow-sm">
+                  <Package className="h-4 w-4 text-primary" />
                 </div>
-                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                  <Button onClick={handleOpenAddProduct} className="bg-primary hover:bg-primary/90">
-                    <Plus className="mr-2 h-4 w-4" /> Add Product
-                  </Button>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="name">Product Name</Label>
-                        <Input 
-                          id="name" 
-                          placeholder="Organic Strawberries" 
-                          value={prodForm.name}
-                          onChange={(e) => setProdForm({...prodForm, name: e.target.value})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select 
-                          onValueChange={(val) => setProdForm({...prodForm, category: val})}
-                          value={prodForm.category}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CATEGORIES.map(cat => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="price">Price ($)</Label>
-                          <Input 
-                            id="price" 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="4.99" 
-                            value={prodForm.price}
-                            onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="offer">Offer Percentage (%)</Label>
-                          <div className="relative">
-                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              id="offer" 
-                              type="number"
-                              className="pl-10"
-                              placeholder="20" 
-                              value={prodForm.offerPercentage}
-                              onChange={(e) => setProdForm({...prodForm, offerPercentage: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="weight">Weight</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            id="weight" 
-                            type="number" 
-                            placeholder="500" 
-                            className="flex-1"
-                            value={prodForm.weight}
-                            onChange={(e) => setProdForm({...prodForm, weight: e.target.value})}
-                          />
-                          <Select 
-                            onValueChange={(val) => setProdForm({...prodForm, unit: val as 'g' | 'kg'})}
-                            value={prodForm.unit}
-                          >
-                            <SelectTrigger className="w-20">
-                              <SelectValue placeholder="Unit" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="g">g</SelectItem>
-                              <SelectItem value="kg">kg</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="imageUrl">Product Image URL</Label>
-                        <div className="relative">
-                          <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="imageUrl" 
-                            className="pl-10"
-                            placeholder="https://images.unsplash.com/..." 
-                            value={prodForm.imageUrl}
-                            onChange={(e) => setProdForm({...prodForm, imageUrl: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg">
-                        <div className="space-y-0.5">
-                          <Label>Stock Status</Label>
-                          <p className="text-[10px] text-muted-foreground">Is this item available for purchase?</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium">{prodForm.isInStock ? 'In Stock' : 'Out of Stock'}</span>
-                          <Switch 
-                            checked={prodForm.isInStock}
-                            onCheckedChange={(checked) => setProdForm({...prodForm, isInStock: checked})}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleSaveProduct} disabled={isSavingProduct} className="w-full bg-primary h-12 font-bold">
-                        {isSavingProduct ? <Loader2 className="animate-spin" /> : editingProduct ? "Update Product Listing" : "Create Product Listing"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search products..." 
-                      className="pl-10"
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                    />
-                  </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">New order ORD-{order.id}</p>
+                  <p className="text-xs text-muted-foreground">${order.total?.toFixed(2)} • {order.address}</p>
                 </div>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Weight</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Offer</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                                <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
-                              </div>
-                              {product.name}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
-                              {product.category}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
-                          </TableCell>
-                          <TableCell>${product.price.toFixed(2)}</TableCell>
-                          <TableCell>
-                            {product.offerPercentage ? (
-                              <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-primary hover:text-primary hover:bg-primary/10"
-                              onClick={() => handleEditProductClick(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteProduct(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold">Category Management</CardTitle>
-                <CardDescription>Organize your product catalog into searchable categories.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {CATEGORIES.map((cat) => (
-                    <div key={cat} className="p-6 border rounded-2xl flex items-center justify-between bg-white shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-primary/10 rounded-xl">
-                          <LayoutGrid className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="font-bold">{cat}</span>
-                      </div>
-                      <Badge variant="secondary">{filteredProducts.filter(p => p.category === cat).length} Products</Badge>
-                    </div>
-                  ))}
-                  <div className="p-6 border border-dashed rounded-2xl flex items-center justify-center bg-muted/5 group cursor-pointer hover:border-primary transition-colors">
-                    <span className="text-sm font-bold text-muted-foreground group-hover:text-primary">+ Add New Category</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold font-headline">Order Stream</CardTitle>
-                <CardDescription>Track and dispatch customer orders</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search orders by ID or address..." 
-                      className="pl-10"
-                      value={orderSearch}
-                      onChange={(e) => setOrderSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-bold">ORD-{order.id}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(order.createdAt).toLocaleTimeString()}
-                          </TableCell>
-                          <TableCell className="font-bold text-primary">${order.total.toFixed(2)}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs">{order.address}</TableCell>
-                          <TableCell>
-                            <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {!order.agentId && order.status !== 'DELIVERED' ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm" onClick={() => setAssigningOrder(order)} className="bg-accent hover:bg-accent/90">
-                                    Assign Agent
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Select Delivery Agent</DialogTitle>
-                                    <CardDescription>Choose an available agent to deliver order {order.id}</CardDescription>
-                                  </DialogHeader>
-                                  <div className="grid gap-4 py-4">
-                                    {agents?.filter(a => a.status === 'Available').map(agent => (
-                                      <div key={agent.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition-colors">
-                                        <div>
-                                          <p className="font-bold">{agent.firstName} {agent.lastName}</p>
-                                          <p className="text-xs text-muted-foreground">{agent.vehicleType || 'E-Bike'}</p>
-                                        </div>
-                                        <Button size="sm" onClick={() => handleAssignAgent(agent.id)}>Assign</Button>
-                                      </div>
-                                    ))}
-                                    {agents?.filter(a => a.status === 'Available').length === 0 && (
-                                      <p className="text-center text-sm text-muted-foreground">No agents currently available.</p>
-                                    )}
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            ) : order.agentId ? (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground justify-end">
-                                <Truck className="h-3 w-3" /> Dispatched
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-xs text-green-600 font-bold justify-end">
-                                <CheckCircle className="h-3 w-3" /> Completed
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredOrders.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-20 text-muted-foreground">
-                            <Clock className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                            No orders matching your search.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="fleet">
-            <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl font-bold">Active Fleet</CardTitle>
-                  <CardDescription>Manage your delivery agents and track their status.</CardDescription>
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="default" className="gap-2 bg-accent hover:bg-accent/90">
-                      <UserPlus className="h-4 w-4" /> Create Agent Account
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Add New Delivery Agent</DialogTitle>
-                      <CardDescription>Enter the agent's details. An authentication account and profile will be created.</CardDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-first">First Name</Label>
-                          <Input 
-                            id="agent-first" 
-                            placeholder="John" 
-                            value={agentForm.firstName}
-                            onChange={(e) => setAgentForm({...agentForm, firstName: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-last">Last Name</Label>
-                          <Input 
-                            id="agent-last" 
-                            placeholder="Smith" 
-                            value={agentForm.lastName}
-                            onChange={(e) => setAgentForm({...agentForm, lastName: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="agent-email">Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="agent-email" 
-                            type="email"
-                            className="pl-10"
-                            placeholder="john.smith@swiftcart.com" 
-                            value={agentForm.email}
-                            onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-phone">Phone Number</Label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              id="agent-phone" 
-                              className="pl-10"
-                              placeholder="+91 98765 43210" 
-                              value={agentForm.phone}
-                              onChange={(e) => setAgentForm({...agentForm, phone: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-pass">Password</Label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              id="agent-pass" 
-                              type="password"
-                              className="pl-10"
-                              placeholder="••••••••" 
-                              value={agentForm.password}
-                              onChange={(e) => setAgentForm({...agentForm, password: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button 
-                        className="w-full h-12 text-base font-bold" 
-                        onClick={handleAddAgent}
-                        disabled={isAddingAgent}
-                      >
-                        {isAddingAgent ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Creating Account...
-                          </>
-                        ) : (
-                          "Create & Grant Access"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search fleet by name or email..." 
-                      className="pl-10"
-                      value={agentSearch}
-                      onChange={(e) => setAgentSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Agent</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAgents.map((agent) => (
-                        <TableRow key={agent.id}>
-                          <TableCell>
-                            <div className="font-medium">{agent.firstName} {agent.lastName}</div>
-                            <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType || 'E-Bike'}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-xs font-medium">{agent.email}</div>
-                            <div className="text-[10px] text-muted-foreground">{agent.phone || 'No Phone'}</div>
-                          </TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              agent.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {agent.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {agent.joinedAt ? new Date(agent.joinedAt).toLocaleDateString() : 'Initial'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteUser('deliveryAgents', agent.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredAgents.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No matching delivery agents found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="customers">
-            <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl font-bold">Registered Customers</CardTitle>
-                  <CardDescription>View all shoppers on the platform.</CardDescription>
-                </div>
-                <Users className="h-5 w-5 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search customers by name or email..." 
-                      className="pl-10"
-                      value={customerSearch}
-                      onChange={(e) => setCustomerSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCustomers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{user.email}</TableCell>
-                          <TableCell className="text-xs">{user.phone || 'N/A'}</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteUser('customers', user.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredCustomers.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                            No matching customers found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+                <span className="text-[10px] font-black text-slate-400">JUST NOW</span>
+              </div>
+            ))}
+            {(!remoteOrders || remoteOrders.length === 0) && (
+              <div className="py-8 text-center text-sm text-muted-foreground italic">
+                No recent activity recorded.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
