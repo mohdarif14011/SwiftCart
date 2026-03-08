@@ -17,7 +17,8 @@ import {
   User, 
   X, 
   TicketPercent, 
-  Info
+  Info,
+  Package
 } from 'lucide-react';
 import { 
   AlertDialog, 
@@ -112,7 +113,11 @@ export default function CustomerCart() {
             {cart.map((item) => (
               <div key={item.productId} className="py-3 flex gap-4 border-b border-slate-50 relative group">
                 <div className="h-14 w-14 rounded-xl bg-slate-50 flex-shrink-0 flex items-center justify-center p-2">
-                  <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+                  ) : (
+                    <Package className="h-6 w-6 text-slate-200" />
+                  )}
                 </div>
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <div>

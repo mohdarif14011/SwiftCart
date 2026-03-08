@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -140,8 +141,12 @@ export default function DeliveryDashboard() {
                         <div className="flex items-center gap-4">
                           <div className="flex -space-x-3">
                             {order.items?.slice(0, 3).map((item: any, idx: number) => (
-                              <div key={idx} className="h-10 w-10 rounded-full border-4 border-white bg-slate-50 overflow-hidden shadow-sm">
-                                <img src={item.imageUrl} alt="" className="object-cover w-full h-full" />
+                              <div key={idx} className="h-10 w-10 rounded-full border-4 border-white bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
+                                {item.imageUrl ? (
+                                  <img src={item.imageUrl} alt="" className="object-cover w-full h-full" />
+                                ) : (
+                                  <Package className="h-4 w-4 text-slate-200" />
+                                )}
                               </div>
                             ))}
                             {order.items?.length > 3 && (
