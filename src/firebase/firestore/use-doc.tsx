@@ -1,3 +1,4 @@
+
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -28,13 +29,13 @@ export interface UseDocResult<T> {
  * React hook to subscribe to a single Firestore document in real-time.
  * Handles nullable references.
  * 
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
+ * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedDocRef or BAD THINGS WILL HAPPEN
  * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
  *
  *
  * @template T Optional type for document data. Defaults to any.
- * @param {DocumentReference<DocumentData> | null | undefined} docRef -
+ * @param {DocumentReference<DocumentData> | null | undefined} memoizedDocRef -
  * The Firestore DocumentReference. Waits if null/undefined.
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
@@ -44,9 +45,16 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  // Start with loading true if we have a ref to fetch
   const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  // Sync state with memoizedDocRef changes immediately during render to avoid race conditions
+  const [prevRef, setPrevRef] = useState(memoizedDocRef);
+  if (memoizedDocRef !== prevRef) {
+    setPrevRef(memoizedDocRef);
+    setIsLoading(!!memoizedDocRef);
+    if (!memoizedDocRef) setData(null);
+  }
 
   useEffect(() => {
     if (!memoizedDocRef) {

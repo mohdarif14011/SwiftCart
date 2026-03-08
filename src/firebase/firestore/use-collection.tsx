@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,7 +48,7 @@ export interface InternalQuery extends Query<DocumentData> {
  * references
  *  
  * @template T Optional type for document data. Defaults to any.
- * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
+ * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} memoizedTargetRefOrQuery -
  * The Firestore CollectionReference or Query. Waits if null/undefined.
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
@@ -58,9 +59,16 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  // Start with loading true if we have a target to fetch
   const [isLoading, setIsLoading] = useState<boolean>(!!memoizedTargetRefOrQuery);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  // Sync state with memoizedTargetRefOrQuery changes immediately during render to avoid race conditions
+  const [prevTarget, setPrevTarget] = useState(memoizedTargetRefOrQuery);
+  if (memoizedTargetRefOrQuery !== prevTarget) {
+    setPrevTarget(memoizedTargetRefOrQuery);
+    setIsLoading(!!memoizedTargetRefOrQuery);
+    if (!memoizedTargetRefOrQuery) setData(null);
+  }
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
