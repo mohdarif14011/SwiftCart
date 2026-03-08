@@ -4,12 +4,17 @@
 import { useAppStore } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Package, DollarSign, ClipboardList, Truck, TrendingUp, Clock } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminOverview() {
   const { products } = useAppStore();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
   const agentsQuery = useMemoFirebase(() => collection(db, 'deliveryAgents'), [db]);
@@ -20,6 +25,19 @@ export default function AdminOverview() {
   const activeOrdersCount = remoteOrders?.filter(o => o.status !== 'DELIVERED').length || 0;
   const totalRevenue = remoteOrders?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
   const availableAgents = agents?.filter(a => a.status === 'Available').length || 0;
+
+  const handleAssignAgent = (orderId: string, agentId: string) => {
+    updateDocumentNonBlocking(doc(db, 'orders', orderId), {
+      agentId: agentId,
+      status: 'PICKED_UP',
+      assignedAt: new Date().toISOString()
+    });
+
+    toast({ 
+      title: "Agent Assigned", 
+      description: `Order ${orderId} has been successfully dispatched.` 
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -88,16 +106,62 @@ export default function AdminOverview() {
             <CardDescription>Latest events from your fleet and orders.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {remoteOrders?.slice(0, 4).map(order => (
-              <div key={order.id} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50">
-                <div className="bg-white p-2 rounded-full border shadow-sm">
-                  <Package className="h-4 w-4 text-primary" />
+            {remoteOrders?.slice(0, 5).map(order => (
+              <div key={order.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 transition-all hover:border-primary/20">
+                <div className="flex items-center gap-4">
+                  <div className="bg-white p-2 rounded-full border shadow-sm flex-shrink-0">
+                    <Package className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-sm font-bold truncate">ORD-{order.id}</p>
+                      <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[9px] font-bold uppercase py-0 px-1.5 h-4">
+                        {order.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      ₹{order.total?.toFixed(2)} • {order.address}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold">New order ORD-{order.id}</p>
-                  <p className="text-xs text-muted-foreground">₹{order.total?.toFixed(2)} • {order.address}</p>
-                </div>
-                <span className="text-[10px] font-black text-slate-400">JUST NOW</span>
+
+                {!order.agentId && order.status !== 'DELIVERED' && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="w-full h-8 text-[11px] font-bold border-primary text-primary hover:bg-primary/5 rounded-lg">
+                        Assign Agent
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Assign Delivery Agent</DialogTitle>
+                        <CardDescription>Order: ORD-{order.id}</CardDescription>
+                      </DialogHeader>
+                      <div className="grid gap-3 py-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                        {agents?.filter(a => a.status === 'Available').map(agent => (
+                          <div key={agent.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition-colors group">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/5 rounded-lg group-hover:bg-primary/10 transition-colors">
+                                <Truck className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold">{agent.firstName} {agent.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{agent.vehicleType || 'E-Bike'}</p>
+                              </div>
+                            </div>
+                            <Button size="sm" onClick={() => handleAssignAgent(order.id, agent.id)} className="h-8 font-bold text-xs">Assign</Button>
+                          </div>
+                        ))}
+                        {agents?.filter(a => a.status === 'Available').length === 0 && (
+                          <div className="py-8 text-center text-sm text-muted-foreground italic flex flex-col items-center gap-2">
+                            <Truck className="h-8 w-8 opacity-20" />
+                            No agents currently available.
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             ))}
             {(!remoteOrders || remoteOrders.length === 0) && (
