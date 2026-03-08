@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Search, Users, Trash2, MapPin, Package, Calendar, Phone, Mail, Clock } from 'lucide-react';
+import { Search, Trash2, MapPin, Package, Clock, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -110,7 +110,6 @@ export default function AdminCustomers() {
 function CustomerDetailsDialog({ customer, isOpen, onClose }: { customer: any | null, isOpen: boolean, onClose: () => void }) {
   const db = useFirestore();
   
-  // Query for this customer's orders
   const ordersQuery = useMemoFirebase(() => {
     if (!customer?.id) return null;
     return query(collection(db, 'orders'), where('userId', '==', customer.id));
@@ -131,9 +130,20 @@ function CustomerDetailsDialog({ customer, isOpen, onClose }: { customer: any | 
               </Badge>
               <div className="flex gap-2">
                 {customer.location && (
-                  <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                    <MapPin className="h-3.5 w-3.5 text-primary" />
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-slate-50 hover:bg-primary/10 hover:text-primary transition-colors border border-slate-100"
+                    asChild
+                  >
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${customer.location.lat},${customer.location.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
                 )}
               </div>
             </div>
