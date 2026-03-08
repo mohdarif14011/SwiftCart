@@ -47,6 +47,8 @@ export type OrderStatus = 'CONFIRMED' | 'PREPARING' | 'PICKED_UP' | 'OUT_FOR_DEL
 export interface Order {
   id: string;
   userId: string;
+  customerName?: string;
+  contactNumber?: string;
   items: CartItem[];
   total: number;
   status: OrderStatus;
