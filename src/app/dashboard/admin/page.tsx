@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -245,7 +244,7 @@ export default function AdminDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="text-xs uppercase tracking-wider font-bold">Inventory Value</CardDescription>
               <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                ${products.reduce((acc, p) => acc + (p.price * p.inventory), 0).toFixed(2)}
+                ${products.reduce((acc, p) => acc + (p.price * (p.inventory || 0)), 0).toFixed(2)}
                 <DollarSign className="h-6 w-6 text-green-500 opacity-20" />
               </CardTitle>
             </CardHeader>
@@ -258,7 +257,8 @@ export default function AdminDashboard() {
                 <Truck className="h-6 w-6 text-blue-500 opacity-20" />
               </CardTitle>
             </CardHeader>
-          </div>
+          </Card>
+        </div>
 
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
@@ -429,9 +429,9 @@ export default function AdminDashboard() {
                           <TableCell>${product.price.toFixed(2)}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              product.inventory > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
-                              {product.inventory > 0 ? 'In Stock' : 'Out of Stock'}
+                              {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
                             </span>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
