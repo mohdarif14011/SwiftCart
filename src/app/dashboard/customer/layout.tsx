@@ -7,7 +7,6 @@ import { useAppStore } from '@/app/lib/store';
 import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth, useFirestore, useDoc, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -56,7 +55,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     { name: 'Categories', href: '/dashboard/customer/categories', icon: LayoutGrid },
     { name: 'Favorites', href: '/dashboard/customer/favorites', icon: Heart },
     { name: 'Orders', href: '/dashboard/customer/orders', icon: Package },
-    { name: 'Cart', href: '/dashboard/customer/cart', icon: ShoppingCart, badge: cart.length },
   ];
 
   if (!isClient) return null;
@@ -91,7 +89,21 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-slate-100 h-9 w-9 relative"
+                onClick={() => router.push('/dashboard/customer/cart')}
+              >
+                <ShoppingCart className="h-5 w-5 text-slate-700" />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                    {cart.length}
+                  </span>
+                )}
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
@@ -128,10 +140,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
         {navItems.map((item) => (
           <div key={item.href} onClick={() => router.push(item.href)} className={cn("flex flex-col items-center gap-1 cursor-pointer", pathname === item.href ? 'text-primary' : 'text-slate-400')}>
             <div className="relative">
-              <item.icon className={cn("h-6 w-6", pathname === item.href && item.name === 'Favorites' && 'fill-primary')} />
-              {item.badge && item.badge > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{item.badge}</span>
-              )}
+              <item.icon className={cn("h-6 w-6", pathname === item.href && (item.name === 'Favorites' || item.name === 'Home') && 'fill-current opacity-100')} />
             </div>
             <span className="text-[10px] font-medium">{item.name}</span>
           </div>
