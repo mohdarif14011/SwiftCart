@@ -1,21 +1,20 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ShoppingBag, Trash2, Plus, Minus, CheckCircle2, ArrowLeft, MapPin, CreditCard } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, ArrowLeft, MapPin, CreditCard } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 export default function CustomerCart() {
-  const { cart, updateCartQuantity, removeFromCart, placeOrder } = useAppStore();
+  const { cart, updateCartQuantity, placeOrder } = useAppStore();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [paymentType, setPaymentType] = useState('cod');
@@ -27,10 +26,10 @@ export default function CustomerCart() {
   const { data: profile } = useDoc(userProfileRef);
 
   useEffect(() => {
-    if (profile?.address && !deliveryAddress) {
+    if (profile?.address) {
       setDeliveryAddress(profile.address);
     }
-  }, [profile, deliveryAddress]);
+  }, [profile]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = cart.length > 0 ? 2.00 : 0;
@@ -108,21 +107,16 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          {/* Delivery Address */}
+          {/* Delivery Address - Static display from profile */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
               <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Delivery Address</h3>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-[10px] font-black uppercase text-slate-400">Street / Apartment / House</Label>
-              <Input 
-                id="address"
-                value={deliveryAddress} 
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="Enter delivery address..."
-                className="bg-slate-50 border-none rounded-xl h-12 text-sm font-bold focus-visible:ring-primary shadow-inner"
-              />
+            <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+               <p className="text-sm font-bold text-slate-900 leading-relaxed">
+                 {deliveryAddress || 'No delivery address found in your profile. Please complete onboarding.'}
+               </p>
             </div>
           </div>
 
@@ -137,7 +131,7 @@ export default function CustomerCart() {
                 <RadioGroupItem value="cod" id="cod" className="peer sr-only" />
                 <Label
                   htmlFor="cod"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
                 >
                   <span className="text-sm font-bold">Cash on Delivery</span>
                 </Label>
@@ -146,7 +140,7 @@ export default function CustomerCart() {
                 <RadioGroupItem value="online" id="online" className="peer sr-only" />
                 <Label
                   htmlFor="online"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
                 >
                   <span className="text-sm font-bold">Online Payment</span>
                 </Label>
