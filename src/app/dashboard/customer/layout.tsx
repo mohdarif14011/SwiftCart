@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
@@ -28,19 +29,14 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
-    // Only perform navigation logic when client is ready and initial loading is complete
     if (!isClient || isUserLoading || isProfileLoading) return;
 
-    // 1. Auth Gate
     if (!firebaseUser) {
       router.replace('/auth/customer');
       return;
     }
 
     const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
-
-    // 2. Profile Gate: Forced Onboarding
-    // If user has no profile document AND is not on the onboarding page, they MUST go to onboarding.
     if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
       return;
@@ -56,7 +52,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     { name: 'Orders', href: '/dashboard/customer/orders', icon: Package },
   ];
 
-  // Show a clean loading state while determining auth/profile status to prevent layout flashes
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-white gap-4">
@@ -70,7 +65,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Specialized full-screen views (No global header/nav)
   if (pathname === '/dashboard/customer/onboarding' || pathname === '/dashboard/customer/cart') {
     return <main className="min-h-[100dvh] bg-white">{children}</main>;
   }
@@ -78,9 +72,9 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const isHomePage = pathname === '/dashboard/customer';
 
   return (
-    <div className="min-h-[100dvh] bg-white flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-[100dvh] bg-white flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] overflow-x-hidden">
       <header className={cn(
-        "bg-white px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-2 transition-all",
+        "bg-white px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-2 transition-all h-16 shrink-0",
         !isHomePage && "hidden"
       )}>
         <div className="flex items-center justify-between gap-2">
@@ -144,7 +138,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-50 h-[calc(4rem+env(safe-area-inset-bottom))]">
         {navItems.map((item) => (
           <div key={item.href} onClick={() => router.push(item.href)} className={cn("flex flex-col items-center gap-0.5 cursor-pointer min-w-[60px]", pathname === item.href ? 'text-primary' : 'text-slate-400')}>
             <div className="relative">

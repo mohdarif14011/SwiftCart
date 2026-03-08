@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, Search, Heart, Plus, Minus, ArrowLeft, Clock, Loader2, Package
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, ArrowLeft, Clock, Loader2, Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,12 +37,12 @@ export default function CustomerCategories() {
     return products.filter(p => 
       p.category === activeCategory && 
       (p.name.toLowerCase().includes(localSearch.toLowerCase()) || 
-       p.description.toLowerCase().includes(localSearch.toLowerCase()))
+       p.description?.toLowerCase().includes(localSearch.toLowerCase()))
     );
   }, [products, activeCategory, localSearch]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-4rem-calc(4rem+env(safe-area-inset-bottom)))] bg-white overflow-hidden">
       <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-50 shrink-0">
         <Button 
           variant="ghost" 
@@ -104,7 +104,7 @@ export default function CustomerCategories() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 bg-slate-50/20">
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-50/20 touch-pan-y">
             {isLoading ? (
               <div className="flex justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />

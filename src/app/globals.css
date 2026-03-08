@@ -55,12 +55,11 @@
     @apply border-border;
   }
   html {
-    @apply h-full overflow-hidden;
+    @apply min-h-full;
     background-color: hsl(var(--background));
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased h-full overflow-y-auto;
-    min-height: 100dvh;
+    @apply bg-background text-foreground font-sans antialiased min-h-[100dvh];
     touch-action: manipulation;
   }
   h1, h2, h3, h4, h5, h6 {
