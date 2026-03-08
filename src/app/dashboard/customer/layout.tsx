@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
@@ -74,7 +73,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-white flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] overflow-x-hidden">
       <header className={cn(
-        "bg-white px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-2 transition-all h-16 shrink-0",
+        "bg-white px-4 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3 transition-all shrink-0",
         !isHomePage && "hidden"
       )}>
         <div className="flex items-center justify-between gap-2">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -63,7 +62,7 @@ export default function CustomerShop() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-4 overflow-x-auto px-4 py-4 no-scrollbar bg-white">
+      <div className="flex items-center gap-4 overflow-x-auto px-4 py-3 no-scrollbar bg-white">
         {CATEGORIES.map((cat) => (
           <button key={cat.name} onClick={() => setActiveCategory(cat.name)} className="flex flex-col items-center gap-1.5 min-w-[65px]">
             <div className={cn("p-2.5 rounded-2xl transition-all", activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-500")}>
