@@ -59,7 +59,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useAuth, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore, useDoc, setDocumentNonBlocking, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 const CATEGORIES = [
@@ -104,10 +104,23 @@ export default function CustomerDashboard() {
   const router = useRouter();
   const auth = useAuth();
   const db = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
   const { toast } = useToast();
 
+  // 1. Sync Firebase User to Store if missing after refresh
+  useEffect(() => {
+    if (firebaseUser && !user) {
+      setUser({
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || 'Customer',
+        email: firebaseUser.email || '',
+        role: 'CUSTOMER',
+      });
+    }
+  }, [firebaseUser, user, setUser]);
+
   // Check if user profile exists
-  const userProfileRef = useMemo(() => user?.id ? doc(db, 'customers', user.id) : null, [db, user?.id]);
+  const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
@@ -116,11 +129,12 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     // If we're on the dashboard and profile doesn't exist, force onboarding
-    if (isClient && !isProfileLoading && !profile && user && currentView === 'home') {
+    // Only check once hydration is complete and auth state is determined
+    if (isClient && !isUserLoading && !isProfileLoading && !profile && firebaseUser && currentView === 'home') {
       setCurrentView('onboarding-map');
       handleAutoLocate();
     }
-  }, [isClient, isProfileLoading, profile, user, currentView]);
+  }, [isClient, isUserLoading, isProfileLoading, profile, firebaseUser, currentView]);
 
   const handleAutoLocate = () => {
     setLocating(true);
@@ -148,7 +162,7 @@ export default function CustomerDashboard() {
   };
 
   const handleOnboardingComplete = () => {
-    if (!user?.id) return;
+    if (!firebaseUser?.uid) return;
     if (!onboardingForm.phone.trim()) {
       toast({ variant: "destructive", title: "Missing Phone", description: "Please provide your mobile number." });
       return;
@@ -159,15 +173,15 @@ export default function CustomerDashboard() {
     }
 
     setSavingProfile(true);
-    const names = user.name.split(' ');
+    const names = (firebaseUser.displayName || 'Customer User').split(' ');
     const firstName = names[0] || 'Customer';
     const lastName = names.slice(1).join(' ') || 'User';
 
     const profileData = {
-      id: user.id,
+      id: firebaseUser.uid,
       firstName,
       lastName,
-      email: user.email,
+      email: firebaseUser.email,
       phone: onboardingForm.phone,
       address: onboardingForm.address,
       nearby: onboardingForm.nearby,
@@ -175,7 +189,7 @@ export default function CustomerDashboard() {
       updatedAt: new Date().toISOString()
     };
 
-    setDocumentNonBlocking(doc(db, 'customers', user.id), profileData, { merge: true });
+    setDocumentNonBlocking(doc(db, 'customers', firebaseUser.uid), profileData, { merge: true });
 
     toast({ title: "Profile Saved", description: "Your delivery details are set." });
     setCurrentView('home');
@@ -261,6 +275,22 @@ export default function CustomerDashboard() {
   };
 
   if (!isClient) return null;
+
+  // Global Loading State (Hydration + Auth + Profile)
+  if (isUserLoading || (firebaseUser && isProfileLoading)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="font-bold text-slate-500 animate-pulse">Setting up your shop...</p>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!firebaseUser && !isUserLoading) {
+    router.replace('/auth/customer');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
@@ -429,7 +459,7 @@ export default function CustomerDashboard() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-xl w-48">
                     <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      {user?.name || 'My Profile'}
+                      {firebaseUser?.displayName || user?.name || 'My Profile'}
                     </div>
                     <Separator className="my-1" />
                     <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
@@ -725,67 +755,69 @@ export default function CustomerDashboard() {
                   </div>
                 ) : (
                   <>
-                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white mb-4">
-                      <CardContent className="p-6">
-                        <h3 className="text-base font-black text-slate-900 mb-6">
-                          Active Tracking: ORD-{selectedOrder.id}
-                        </h3>
+                    {selectedOrder && (
+                      <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white mb-4">
+                        <CardContent className="p-6">
+                          <h3 className="text-base font-black text-slate-900 mb-6">
+                            Active Tracking: ORD-{selectedOrder.id}
+                          </h3>
 
-                        <div className="relative space-y-8 pl-12">
-                          <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-100" />
-                          
-                          {/* Timeline Steps */}
-                          <div className="relative">
-                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                              ['CONFIRMED', 'PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
-                            )}>
-                              <MapPin className="h-5 w-5" />
+                          <div className="relative space-y-8 pl-12">
+                            <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-100" />
+                            
+                            {/* Timeline Steps */}
+                            <div className="relative">
+                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                                ['CONFIRMED', 'PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
+                              )}>
+                                <MapPin className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900">Order Placed</p>
+                                <p className="text-xs text-slate-400 font-medium">
+                                  {selectedOrder.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-900">Order Placed</p>
-                              <p className="text-xs text-slate-400 font-medium">
-                                {selectedOrder.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
-                              </p>
+
+                            <div className="relative">
+                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                                ['PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
+                              )}>
+                                <Box className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900">Packed in SwiftCart Warehouse</p>
+                                <p className="text-xs text-slate-400 font-medium">Items are carefully packed</p>
+                              </div>
+                            </div>
+
+                            <div className="relative">
+                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                                ['PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
+                              )}>
+                                <Truck className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900">Picked up by Swift Drones & Co.</p>
+                                <p className="text-xs text-slate-400 font-medium">Out for delivery</p>
+                              </div>
+                            </div>
+
+                            <div className="relative">
+                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
+                                selectedOrder.status === 'DELIVERED' ? "bg-green-500 text-white" : "bg-white text-slate-300 border-slate-100"
+                              )}>
+                                <HomeIcon className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <p className={cn("text-sm font-black", selectedOrder.status === 'DELIVERED' ? "text-slate-900" : "text-slate-300")}>Order Delivered</p>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="relative">
-                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                              ['PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
-                            )}>
-                              <Box className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-900">Packed in SwiftCart Warehouse</p>
-                              <p className="text-xs text-slate-400 font-medium">Items are carefully packed</p>
-                            </div>
-                          </div>
-
-                          <div className="relative">
-                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                              ['PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
-                            )}>
-                              <Truck className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-900">Picked up by Swift Drones & Co.</p>
-                              <p className="text-xs text-slate-400 font-medium">Out for delivery</p>
-                            </div>
-                          </div>
-
-                          <div className="relative">
-                            <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                              selectedOrder.status === 'DELIVERED' ? "bg-green-500 text-white" : "bg-white text-slate-300 border-slate-100"
-                            )}>
-                              <HomeIcon className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className={cn("text-sm font-black", selectedOrder.status === 'DELIVERED' ? "text-slate-900" : "text-slate-300")}>Order Delivered</p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     <div className="space-y-4 pt-4">
                       <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">Order History</h3>
@@ -919,14 +951,6 @@ export default function CustomerDashboard() {
             </AlertDialogContent>
           </AlertDialog>
         </>
-      )}
-
-      {/* Loading State */}
-      {isProfileLoading && currentView === 'home' && (
-        <div className="flex flex-col items-center justify-center h-screen space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="font-bold text-slate-500 animate-pulse">Setting up your shop...</p>
-        </div>
       )}
     </div>
   );
