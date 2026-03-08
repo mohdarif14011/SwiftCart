@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -100,6 +99,7 @@ export default function CustomerDashboard() {
   const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '', nearby: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [hasDismissedOnboarding, setHasDismissedOnboarding] = useState(false);
+  const [isManualNavigation, setIsManualNavigation] = useState(false);
 
   const router = useRouter();
   const auth = useAuth();
@@ -125,13 +125,21 @@ export default function CustomerDashboard() {
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
-  // Automatically show onboarding only if no profile exists and we haven't just finished setting it up
+  // Robust onboarding check
   useEffect(() => {
-    if (isClient && !isUserLoading && !isProfileLoading && !profile && firebaseUser && currentView === 'home' && !hasDismissedOnboarding) {
+    if (!isClient || isUserLoading || isProfileLoading || hasDismissedOnboarding) return;
+
+    // Automatically show onboarding if profile is missing
+    if (!profile && firebaseUser && currentView === 'home' && !isManualNavigation) {
       setCurrentView('onboarding-map');
       handleAutoLocate();
     }
-  }, [isClient, isUserLoading, isProfileLoading, profile, firebaseUser, currentView, hasDismissedOnboarding]);
+    
+    // Automatically exit onboarding if profile is detected (e.g. after slow load or refresh)
+    if (profile && (currentView === 'onboarding-map' || currentView === 'onboarding-details') && !isManualNavigation) {
+      setCurrentView('home');
+    }
+  }, [isClient, isUserLoading, isProfileLoading, profile, firebaseUser, currentView, hasDismissedOnboarding, isManualNavigation]);
 
   const handleAutoLocate = () => {
     setLocating(true);
@@ -184,6 +192,7 @@ export default function CustomerDashboard() {
 
     toast({ title: "Profile Saved", description: "Your delivery details are set." });
     setHasDismissedOnboarding(true);
+    setIsManualNavigation(false);
     setCurrentView('home');
     setSavingProfile(false);
   };
@@ -255,6 +264,7 @@ export default function CustomerDashboard() {
     if (profile?.location) {
       setGpsLocation(profile.location);
     }
+    setIsManualNavigation(true);
     setCurrentView('onboarding-map');
   };
 
@@ -277,120 +287,125 @@ export default function CustomerDashboard() {
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
       {/* Onboarding View */}
-      {currentView === 'onboarding-map' && (
+      {(currentView === 'onboarding-map' || currentView === 'onboarding-details') && (
         <div className="flex flex-col h-screen bg-white">
-          <div className="p-6 space-y-2">
-            <h1 className="text-3xl font-black text-slate-900">Pin Your House</h1>
-            <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
-          </div>
-          <div className="flex-1 relative bg-slate-100 overflow-hidden">
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=18&output=embed`}
-              className="w-full h-full grayscale opacity-70"
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative">
-                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
-                  <MapPin className="h-6 w-6 text-white" />
+          {currentView === 'onboarding-map' ? (
+            <>
+              <div className="p-6 space-y-2">
+                <h1 className="text-3xl font-black text-slate-900">Pin Your House</h1>
+                <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
+              </div>
+              <div className="flex-1 relative bg-slate-100 overflow-hidden">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${gpsLocation?.lat || FALLBACK_LAT},${gpsLocation?.lng || FALLBACK_LNG}&z=18&output=embed`}
+                  className="w-full h-full grayscale opacity-70"
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
+                      <MapPin className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="absolute bottom-6 right-6 rounded-full h-14 w-14 bg-white shadow-2xl p-0"
+                  onClick={handleAutoLocate}
+                  disabled={locating}
+                >
+                  {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
+                </Button>
+                {(profile || isManualNavigation) && (
+                  <Button 
+                    variant="ghost" 
+                    className="absolute top-6 left-6 rounded-full h-10 w-10 bg-white/80 backdrop-blur-sm shadow-md p-0"
+                    onClick={() => {
+                      setIsManualNavigation(false);
+                      setCurrentView('home');
+                    }}
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
+              <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
+                <Button 
+                  className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
+                  onClick={() => setCurrentView('onboarding-details')}
+                  disabled={!gpsLocation}
+                >
+                  Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col h-screen bg-white p-6 space-y-8 overflow-y-auto">
+              <div className="space-y-2">
+                <button onClick={() => setCurrentView('onboarding-map')} className="p-1 -ml-1">
+                  <ArrowLeft className="h-6 w-6 text-slate-900" />
+                </button>
+                <h1 className="text-3xl font-black text-slate-900">Delivery Info</h1>
+                <p className="text-slate-500 font-medium">Finalize your profile details.</p>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Street Address</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      placeholder="Street name, House No, Area" 
+                      className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                      value={onboardingForm.address}
+                      onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      placeholder="e.g. +91 98765 43210" 
+                      className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                      value={onboardingForm.phone}
+                      onChange={(e) => setOnboardingForm({...onboardingForm, phone: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Landmarks)</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      placeholder="Opposite Park, Next to Gym etc." 
+                      className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
+                      value={onboardingForm.nearby}
+                      onChange={(e) => setOnboardingForm({...onboardingForm, nearby: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <Button 
-              variant="outline" 
-              className="absolute bottom-6 right-6 rounded-full h-14 w-14 bg-white shadow-2xl p-0"
-              onClick={handleAutoLocate}
-              disabled={locating}
-            >
-              {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
-            </Button>
-            {profile && (
+              <div className="flex-1" />
               <Button 
-                variant="ghost" 
-                className="absolute top-6 left-6 rounded-full h-10 w-10 bg-white/80 backdrop-blur-sm shadow-md p-0"
-                onClick={() => setCurrentView('home')}
+                className="w-full h-14 text-lg font-black rounded-2xl bg-green-600 hover:bg-green-700 shadow-xl"
+                onClick={handleOnboardingComplete}
+                disabled={savingProfile}
               >
-                <ArrowLeft className="h-5 w-5" />
+                {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : (profile ? "Update Profile" : "Create Profile")}
               </Button>
-            )}
-          </div>
-          <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
-            <Button 
-              className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
-              onClick={() => setCurrentView('onboarding-details')}
-              disabled={!gpsLocation}
-            >
-              Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {currentView === 'onboarding-details' && (
-        <div className="flex flex-col h-screen bg-white p-6 space-y-8 overflow-y-auto">
-          <div className="space-y-2">
-            <button onClick={() => setCurrentView('onboarding-map')} className="p-1 -ml-1">
-              <ArrowLeft className="h-6 w-6 text-slate-900" />
-            </button>
-            <h1 className="text-3xl font-black text-slate-900">Delivery Info</h1>
-            <p className="text-slate-500 font-medium">Finalize your profile details.</p>
-          </div>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Street Address</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input 
-                  placeholder="Street name, House No, Area" 
-                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
-                  value={onboardingForm.address}
-                  onChange={(e) => setOnboardingForm({...onboardingForm, address: e.target.value})}
-                />
-              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input 
-                  placeholder="e.g. +91 98765 43210" 
-                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
-                  value={onboardingForm.phone}
-                  onChange={(e) => setOnboardingForm({...onboardingForm, phone: e.target.value})}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Landmarks)</label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input 
-                  placeholder="Opposite Park, Next to Gym etc." 
-                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold"
-                  value={onboardingForm.nearby}
-                  onChange={(e) => setOnboardingForm({...onboardingForm, nearby: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex-1" />
-          <Button 
-            className="w-full h-14 text-lg font-black rounded-2xl bg-green-600 hover:bg-green-700 shadow-xl"
-            onClick={handleOnboardingComplete}
-            disabled={savingProfile}
-          >
-            {savingProfile ? <Loader2 className="h-6 w-6 animate-spin" /> : (profile ? "Update Profile" : "Create Profile")}
-          </Button>
+          )}
         </div>
       )}
 
       {/* Main App Views */}
-      {['home', 'categories', 'favorites', 'cart', 'order-success', 'orders'].includes(currentView) && profile && (
+      {['home', 'categories', 'favorites', 'cart', 'order-success', 'orders'].includes(currentView) && (
         <>
           {/* Header */}
           <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
@@ -410,7 +425,7 @@ export default function CustomerDashboard() {
                     <ChevronDown className="h-3 w-3 text-slate-400" />
                   </div>
                   <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
-                    {profile.address}
+                    {profile?.address || 'Set delivery location'}
                   </span>
                 </div>
               </div>
