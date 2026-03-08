@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
-import { Star, Heart, Plus, Minus, ArrowLeft, Search } from 'lucide-react';
+import { Star, Heart, Plus, Minus, ArrowLeft, Search, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function CustomerFavorites() {
@@ -102,17 +102,27 @@ function ProductCard({ product }: { product: any }) {
           </div>
         )}
       </div>
+
       <div className="flex flex-col px-1 gap-1">
-        <h4 className="text-sm font-medium text-slate-900 line-clamp-2 leading-tight h-9 mb-1">{product.name}</h4>
-        <div className="flex items-center gap-0.5 mb-1">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />
-          ))}
+        <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center gap-1 text-slate-400">
+            <Clock className="h-3 w-3" />
+            <span className="text-[10px] font-bold">9 mins</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            {product.weight}{product.unit}
+          </span>
         </div>
-        <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-base font-bold text-slate-900">₹{product.price.toFixed(2)}</span>
+        
+        <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
+        
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
+          <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded-full">{product.offerPercentage}% OFF</span>
+            <span className="text-[10px] font-bold text-green-600 ml-auto">
+              {product.offerPercentage}% off
+            </span>
           )}
         </div>
       </div>

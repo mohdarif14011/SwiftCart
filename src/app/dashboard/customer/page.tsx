@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Star, Heart, Plus, Minus
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Star, Heart, Plus, Minus, Clock
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -92,30 +92,58 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
 
   return (
     <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[150px] max-w-[150px]' : 'w-full')}>
-      <div className="relative aspect-square bg-slate-50 rounded-3xl overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50">
-        <img src={product.imageUrl} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
-        <button onClick={() => toggleFavorite(product.id)} className={cn("absolute top-3 right-3 transition-colors", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}>
-          <Heart className={cn("h-5 w-5", isFavorite && 'fill-current')} />
+      <div className="relative aspect-square bg-slate-50 rounded-[2rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50">
+        <img 
+          src={product.imageUrl} 
+          alt={product.name} 
+          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
+        />
+        <button 
+          onClick={() => toggleFavorite(product.id)} 
+          className={cn("absolute top-3 right-3 transition-colors z-10", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}
+        >
+          <Heart className={cn("h-4 w-4", isFavorite && 'fill-current')} />
         </button>
         {!cartItem ? (
-          <button onClick={() => addToCart(product)} className="absolute bottom-3 right-3 bg-white text-primary font-bold text-xs px-4 py-2 rounded-xl shadow-sm border border-slate-100 hover:bg-primary hover:text-white transition-all">ADD</button>
+          <button 
+            onClick={() => addToCart(product)} 
+            className="absolute bottom-3 right-3 bg-white text-primary font-bold text-[10px] px-3 py-1.5 rounded-xl shadow-sm border border-slate-100 hover:bg-primary hover:text-white transition-all z-10"
+          >
+            ADD
+          </button>
         ) : (
-          <div className="absolute bottom-3 right-3 bg-primary text-white flex items-center rounded-xl shadow-sm overflow-hidden">
-            <button className="px-2 py-2 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}><Minus className="h-3 w-3" /></button>
-            <span className="px-2 text-xs font-bold">{cartItem.quantity}</span>
-            <button className="px-2 py-2 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}><Plus className="h-3 w-3" /></button>
+          <div className="absolute bottom-3 right-3 bg-primary text-white flex items-center rounded-xl shadow-sm overflow-hidden z-10">
+            <button className="px-2 py-1.5 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}>
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="px-1 text-[11px] font-bold">{cartItem.quantity}</span>
+            <button className="px-2 py-1.5 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}>
+              <Plus className="h-3 w-3" />
+            </button>
           </div>
         )}
       </div>
+      
       <div className="flex flex-col px-1 gap-1">
-        <h4 className="text-sm font-medium text-slate-900 line-clamp-2 leading-snug h-10">{product.name}</h4>
-        <div className="flex items-center gap-1">
-          <div className="flex items-center">{[1, 2, 3, 4, 5].map((s) => (<Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />))}</div>
+        <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center gap-1 text-slate-400">
+            <Clock className="h-3 w-3" />
+            <span className="text-[10px] font-bold">9 mins</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            {product.weight}{product.unit}
+          </span>
         </div>
-        <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-base font-bold text-slate-900">₹{product.price.toFixed(2)}</span>
+        
+        <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
+        
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
+          <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded-full">{product.offerPercentage}% OFF</span>
+            <span className="text-[10px] font-bold text-green-600 ml-auto">
+              {product.offerPercentage}% off
+            </span>
           )}
         </div>
       </div>
