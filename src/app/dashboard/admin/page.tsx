@@ -57,18 +57,7 @@ export default function AdminOverview() {
         <StatCard title="Fleet Status" value={`${availableAgents} Online`} icon={Truck} color="text-blue-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-none bg-slate-50/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" /> Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-48 flex items-center justify-center text-muted-foreground text-xs italic">
-            Visual analytics coming soon.
-          </CardContent>
-        </Card>
-
+      <div className="max-w-3xl">
         <Card className="border-none bg-slate-50/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
