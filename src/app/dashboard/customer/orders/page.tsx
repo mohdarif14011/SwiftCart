@@ -48,31 +48,31 @@ export default function CustomerOrders() {
   }, [sortedOrders, successId]);
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="p-4 bg-slate-50 min-h-screen space-y-4">
+      <div className="flex items-center gap-3">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => router.back()} 
-          className="rounded-2xl bg-white shadow-sm hover:bg-slate-100 transition-colors"
+          className="rounded-xl bg-white shadow-sm hover:bg-slate-100 transition-colors h-9 w-9"
         >
-          <ArrowLeft className="h-5 w-5 text-slate-900" />
+          <ArrowLeft className="h-4 w-4 text-slate-900" />
         </Button>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">My Orders</h2>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">My Orders</h2>
       </div>
       
       {successId && activeOrder && (
-        <div className="border-none bg-green-50/50 p-8 text-center space-y-4 rounded-[2.5rem] animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
-            <CheckCircle2 className="h-10 w-10 text-green-600" />
+        <div className="bg-green-50/40 p-6 text-center space-y-3 rounded-3xl animate-in fade-in zoom-in duration-500 border border-green-100/50">
+          <div className="w-14 h-14 bg-green-100/80 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-7 w-7 text-green-600" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-bold text-slate-900">Order Placed!</h3>
-            <p className="text-sm text-slate-500 font-medium">ORD-{activeOrder.id} • {STATUS_LABELS[activeOrder.status]}</p>
+          <div className="space-y-0.5">
+            <h3 className="text-lg font-bold text-slate-900">Order Placed!</h3>
+            <p className="text-[11px] text-slate-500 font-medium">ORD-{activeOrder.id} • {STATUS_LABELS[activeOrder.status]}</p>
           </div>
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm bg-white/60 py-2 px-4 rounded-full w-fit mx-auto border border-green-100/50">
-              <Truck className="h-4 w-4" /> Tracking Live
+          <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-[11px] bg-white/80 py-1.5 px-3 rounded-full border border-green-100/30">
+              <Truck className="h-3.5 w-3.5" /> Tracking Live
             </div>
           </div>
         </div>
@@ -80,61 +80,61 @@ export default function CustomerOrders() {
 
       {isLoading ? (
         <div className="py-20 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : sortedOrders.length === 0 ? (
-        <div className="py-20 text-center text-slate-400 font-medium">No orders yet.</div>
+        <div className="py-20 text-center text-slate-400 text-sm font-medium">No orders yet.</div>
       ) : (
-        <div className="space-y-4 pb-20">
+        <div className="space-y-3 pb-20">
           {sortedOrders.map((o) => (
-            <div key={o.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-5">
+            <div key={o.id} className="bg-transparent p-4 rounded-2xl border border-slate-200/60 space-y-4">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-slate-50 rounded-2xl">
-                    <Package className="h-6 w-6 text-slate-400" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-slate-100 rounded-xl">
+                    <Package className="h-5 w-5 text-slate-400" />
                   </div>
                   <div className="space-y-0.5">
-                    <p className="text-base font-bold text-slate-900">ORD-{o.id}</p>
-                    <p className="text-xs text-slate-400 font-medium">{new Date(o.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm font-bold text-slate-900">ORD-{o.id}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{new Date(o.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <Badge variant={o.status === 'DELIVERED' ? 'default' : 'secondary'} className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
+                <Badge variant={o.status === 'DELIVERED' ? 'default' : 'secondary'} className="rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
                   {STATUS_LABELS[o.status] || o.status}
                 </Badge>
               </div>
               
-              <div className="space-y-3">
-                {o.items?.slice(0, 2).map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-sm font-medium text-slate-600">
-                    <span>{item.name} x{item.quantity}</span>
-                    <span className="font-bold">₹{(item.price * item.quantity).toFixed(2)}</span>
+              <div className="space-y-2.5 px-1">
+                {o.items?.slice(0, 3).map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between text-xs font-medium text-slate-600">
+                    <span>{item.name} <span className="text-slate-400 text-[10px]">x{item.quantity}</span></span>
+                    <span className="font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
-                {(o.items?.length || 0) > 2 && (
-                  <p className="text-[11px] text-slate-400 font-semibold">+ {o.items.length - 2} more items</p>
+                {(o.items?.length || 0) > 3 && (
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">+ {o.items.length - 3} more items</p>
                 )}
               </div>
               
-              <Separator className="bg-slate-50" />
+              <Separator className="bg-slate-200/50" />
               
-              <div className="flex justify-between items-center pt-1">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+              <div className="flex justify-between items-center px-1">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                     {o.status === 'DELIVERED' ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
                     ) : (
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-3.5 w-3.5 text-amber-500" />
                     )}
                     {o.status === 'DELIVERED' ? 'Delivered' : 'Arriving Soon'}
                   </div>
                 </div>
-                <span className="text-xl font-bold text-primary">₹{o.total?.toFixed(2)}</span>
+                <span className="text-lg font-bold text-primary">₹{o.total?.toFixed(2)}</span>
               </div>
               
               {o.status !== 'DELIVERED' && o.agentId && (
-                <Button variant="outline" className="w-full gap-2 border-primary text-primary" asChild>
+                <Button variant="outline" size="sm" className="w-full gap-2 border-primary/20 text-primary text-xs h-9 font-bold" asChild>
                   <a href={`tel:${o.contactNumber || '9999999999'}`}>
-                    <Phone className="h-4 w-4" /> Call Delivery Partner
+                    <Phone className="h-3.5 w-3.5" /> Call Delivery Partner
                   </a>
                 </Button>
               )}
