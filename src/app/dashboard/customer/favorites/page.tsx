@@ -68,6 +68,9 @@ function ProductCard({ product }: { product: any }) {
   const cartItem = cart.find(i => i.productId === product.id);
   const isFavorite = favorites.includes(product.id);
 
+  const offer = product.offerPercentage || 0;
+  const sellingPrice = product.price * (1 - offer / 100);
+
   return (
     <div className="flex flex-col w-full group">
       {/* Image Container */}
@@ -104,12 +107,14 @@ function ProductCard({ product }: { product: any }) {
         <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
         
         <div className="flex items-center gap-2 mt-0.5 mb-2">
-          <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
-          <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
-          {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
-              {product.offerPercentage}% off
-            </span>
+          <span className="text-sm font-bold text-slate-900">₹{sellingPrice.toFixed(0)}</span>
+          {offer > 0 && (
+            <>
+              <span className="text-[10px] text-slate-300 line-through">₹{product.price.toFixed(0)}</span>
+              <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
+                {offer}% off
+              </span>
+            </>
           )}
         </div>
       </div>

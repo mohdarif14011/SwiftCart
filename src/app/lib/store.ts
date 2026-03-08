@@ -39,13 +39,24 @@ export const useAppStore = create<AppState>()(
       })),
       addToCart: (product) => set((state) => {
         const existing = state.cart.find(i => i.productId === product.id);
+        const discount = product.offerPercentage || 0;
+        const sellingPrice = product.price * (1 - discount / 100);
+
         if (existing) {
           return {
             cart: state.cart.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i)
           };
         }
         return {
-          cart: [...state.cart, { productId: product.id, name: product.name, price: product.price, quantity: 1, imageUrl: product.imageUrl, weight: product.weight, unit: product.unit }]
+          cart: [...state.cart, { 
+            productId: product.id, 
+            name: product.name, 
+            price: sellingPrice, 
+            quantity: 1, 
+            imageUrl: product.imageUrl, 
+            weight: product.weight, 
+            unit: product.unit 
+          }]
         };
       }),
       removeFromCart: (productId) => set((state) => ({

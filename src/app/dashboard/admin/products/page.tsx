@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -28,7 +29,7 @@ const CATEGORIES = [
 
 export default function AdminProducts() {
   const db = useFirestore();
-  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
+  productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
   const { data: products, isLoading } = useCollection<Product>(productsQuery);
   
   const [productSearch, setProductSearch] = useState('');
@@ -140,7 +141,7 @@ export default function AdminProducts() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-2xl font-bold font-headline">Inventory</CardTitle>
-            <CardDescription>Manage your store catalog</CardDescription>
+            <CardDescription>Manage your store catalog (Price = MRP)</CardDescription>
           </div>
           <Button onClick={handleOpenAddProduct} className="bg-primary hover:bg-primary/90">
             <Plus className="mr-2 h-4 w-4" /> Add Product
@@ -169,59 +170,63 @@ export default function AdminProducts() {
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Weight</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead>MRP</TableHead>
                     <TableHead>Offer</TableHead>
+                    <TableHead>Selling Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
-                            {product.imageUrl ? (
-                              <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
-                            ) : (
-                              <Package className="h-5 w-5 text-muted-foreground" />
-                            )}
+                  {filteredProducts.map((product) => {
+                    const sellingPrice = product.price * (1 - (product.offerPercentage || 0) / 100);
+                    return (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+                              {product.imageUrl ? (
+                                <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                              ) : (
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p>{product.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{product.weight}{product.unit}</p>
+                            </div>
                           </div>
-                          {product.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
-                          {product.category}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
-                      </TableCell>
-                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {product.offerPercentage ? (
-                          <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditProductClick(product)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteProduct(product.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
+                            {product.category}
+                          </span>
+                        </TableCell>
+                        <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {product.offerPercentage ? (
+                            <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="font-bold text-primary">₹{sellingPrice.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditProductClick(product)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteProduct(product.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {filteredProducts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
@@ -257,7 +262,7 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="price">Price (₹)</Label>
+                <Label htmlFor="price">MRP (₹)</Label>
                 <Input id="price" type="number" step="0.01" placeholder="99.00" value={prodForm.price} onChange={(e) => setProdForm({...prodForm, price: e.target.value})} />
               </div>
               <div className="grid gap-2">
