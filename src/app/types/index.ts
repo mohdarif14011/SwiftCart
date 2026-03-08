@@ -18,6 +18,7 @@ export interface Product {
   description: string;
   weight?: number;
   unit?: 'g' | 'kg';
+  offerPercentage?: number;
 }
 
 export interface DeliveryAgent {

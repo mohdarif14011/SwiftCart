@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -22,7 +23,7 @@ import {
   Lock,
   Phone,
   Image as ImageIcon,
-  Weight
+  Tag
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,7 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
+import { Product } from '@/app/types';
 
 const CATEGORIES = [
   'Vegetables',
@@ -48,18 +50,21 @@ const CATEGORIES = [
 ];
 
 export default function AdminDashboard() {
-  const { products, setProducts, setUser } = useAppStore();
+  const { products, setProducts, updateProduct, setUser } = useAppStore();
   const [productSearch, setProductSearch] = useState('');
   const [agentSearch, setAgentSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   const router = useRouter();
   const db = useFirestore();
   const { toast } = useToast();
 
-  // Form states for adding product
+  // Form states for adding/editing product
   const [prodForm, setProdForm] = useState({ 
     name: '', 
     category: '', 
@@ -67,7 +72,8 @@ export default function AdminDashboard() {
     imageUrl: '',
     weight: '',
     unit: 'g' as 'g' | 'kg',
-    isInStock: true 
+    isInStock: true,
+    offerPercentage: ''
   });
   
   // Form states for adding agent
@@ -114,23 +120,46 @@ export default function AdminDashboard() {
     toast({ title: "Product Removed", description: "The item has been removed from the catalog." });
   };
 
-  const handleDeleteUser = (col: string, id: string) => {
-    deleteDocumentNonBlocking(doc(db, col, id));
-    if (col === 'deliveryAgents') {
-      deleteDocumentNonBlocking(doc(db, 'roles_delivery_agent', id));
-    }
-    toast({ title: "User Deleted", description: "The account and role have been revoked." });
+  const handleEditProductClick = (product: Product) => {
+    setEditingProduct(product);
+    setProdForm({
+      name: product.name,
+      category: product.category,
+      price: product.price.toString(),
+      imageUrl: product.imageUrl,
+      weight: product.weight?.toString() || '',
+      unit: product.unit || 'g',
+      isInStock: (product.inventory || 0) > 0,
+      offerPercentage: product.offerPercentage?.toString() || ''
+    });
+    setIsProductDialogOpen(true);
   };
 
-  const handleAddProduct = () => {
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    setProdForm({ 
+      name: '', 
+      category: '', 
+      price: '', 
+      imageUrl: '', 
+      weight: '', 
+      unit: 'g', 
+      isInStock: true, 
+      offerPercentage: '' 
+    });
+    setIsProductDialogOpen(true);
+  };
+
+  const handleSaveProduct = () => {
     if (!prodForm.name || !prodForm.category || !prodForm.price) {
       toast({ variant: "destructive", title: "Error", description: "Name, Category, and Price are required." });
       return;
     }
     
-    setIsAddingProduct(true);
-    const newProduct = {
-      id: Math.random().toString(36).substr(2, 9),
+    setIsSavingProduct(true);
+    
+    const productData: Product = {
+      id: editingProduct?.id || Math.random().toString(36).substr(2, 9),
       name: prodForm.name,
       category: prodForm.category,
       price: parseFloat(prodForm.price),
@@ -138,13 +167,21 @@ export default function AdminDashboard() {
       imageUrl: prodForm.imageUrl || `https://picsum.photos/seed/${prodForm.name}/300/300`,
       description: `Freshly stocked ${prodForm.name}`,
       weight: prodForm.weight ? parseFloat(prodForm.weight) : undefined,
-      unit: prodForm.unit
+      unit: prodForm.unit,
+      offerPercentage: prodForm.offerPercentage ? parseFloat(prodForm.offerPercentage) : undefined
     };
 
-    setProducts([...products, newProduct]);
-    toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
-    setProdForm({ name: '', category: '', price: '', imageUrl: '', weight: '', unit: 'g', isInStock: true });
-    setIsAddingProduct(false);
+    if (editingProduct) {
+      updateProduct(productData);
+      toast({ title: "Product Updated", description: `${prodForm.name} changes have been saved.` });
+    } else {
+      setProducts([...products, productData]);
+      toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
+    }
+
+    setIsSavingProduct(false);
+    setIsProductDialogOpen(false);
+    setEditingProduct(null);
   };
 
   const handleAddAgent = async () => {
@@ -202,6 +239,14 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     setUser(null);
     router.push('/');
+  };
+
+  const handleDeleteUser = (col: string, id: string) => {
+    deleteDocumentNonBlocking(doc(db, col, id));
+    if (col === 'deliveryAgents') {
+      deleteDocumentNonBlocking(doc(db, 'roles_delivery_agent', id));
+    }
+    toast({ title: "User Deleted", description: "The account and role have been revoked." });
   };
 
   return (
@@ -274,15 +319,13 @@ export default function AdminDashboard() {
                   <CardTitle className="text-2xl font-bold font-headline">Inventory</CardTitle>
                   <CardDescription>Manage your store catalog</CardDescription>
                 </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="mr-2 h-4 w-4" /> Add Product
-                    </Button>
-                  </DialogTrigger>
+                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                  <Button onClick={handleOpenAddProduct} className="bg-primary hover:bg-primary/90">
+                    <Plus className="mr-2 h-4 w-4" /> Add Product
+                  </Button>
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                      <DialogTitle>Add New Product</DialogTitle>
+                      <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
@@ -323,29 +366,43 @@ export default function AdminDashboard() {
                           />
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="weight">Weight</Label>
-                          <div className="flex gap-2">
+                          <Label htmlFor="offer">Offer Percentage (%)</Label>
+                          <div className="relative">
+                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
-                              id="weight" 
-                              type="number" 
-                              placeholder="500" 
-                              className="flex-1"
-                              value={prodForm.weight}
-                              onChange={(e) => setProdForm({...prodForm, weight: e.target.value})}
+                              id="offer" 
+                              type="number"
+                              className="pl-10"
+                              placeholder="20" 
+                              value={prodForm.offerPercentage}
+                              onChange={(e) => setProdForm({...prodForm, offerPercentage: e.target.value})}
                             />
-                            <Select 
-                              onValueChange={(val) => setProdForm({...prodForm, unit: val as 'g' | 'kg'})}
-                              value={prodForm.unit}
-                            >
-                              <SelectTrigger className="w-20">
-                                <SelectValue placeholder="Unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="g">g</SelectItem>
-                                <SelectItem value="kg">kg</SelectItem>
-                              </SelectContent>
-                            </Select>
                           </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="weight">Weight</Label>
+                        <div className="flex gap-2">
+                          <Input 
+                            id="weight" 
+                            type="number" 
+                            placeholder="500" 
+                            className="flex-1"
+                            value={prodForm.weight}
+                            onChange={(e) => setProdForm({...prodForm, weight: e.target.value})}
+                          />
+                          <Select 
+                            onValueChange={(val) => setProdForm({...prodForm, unit: val as 'g' | 'kg'})}
+                            value={prodForm.unit}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue placeholder="Unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="g">g</SelectItem>
+                              <SelectItem value="kg">kg</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div className="grid gap-2">
@@ -376,8 +433,8 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleAddProduct} disabled={isAddingProduct} className="w-full bg-primary h-12 font-bold">
-                        {isAddingProduct ? <Loader2 className="animate-spin" /> : "Create Product Listing"}
+                      <Button onClick={handleSaveProduct} disabled={isSavingProduct} className="w-full bg-primary h-12 font-bold">
+                        {isSavingProduct ? <Loader2 className="animate-spin" /> : editingProduct ? "Update Product Listing" : "Create Product Listing"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -403,6 +460,7 @@ export default function AdminDashboard() {
                         <TableHead>Category</TableHead>
                         <TableHead>Weight</TableHead>
                         <TableHead>Price</TableHead>
+                        <TableHead>Offer</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -428,6 +486,11 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>${product.price.toFixed(2)}</TableCell>
                           <TableCell>
+                            {product.offerPercentage ? (
+                              <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
@@ -435,7 +498,12 @@ export default function AdminDashboard() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
-                            <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleEditProductClick(product)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button 

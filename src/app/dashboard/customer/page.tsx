@@ -672,7 +672,9 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
         </div>
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-sm font-black text-slate-900">₹{product.price}</span>
-          <span className="text-[10px] font-black text-green-600 ml-auto">22% OFF</span>
+          {product.offerPercentage && (
+            <span className="text-[10px] font-black text-green-600 ml-auto">{product.offerPercentage}% OFF</span>
+          )}
         </div>
       </div>
     </div>

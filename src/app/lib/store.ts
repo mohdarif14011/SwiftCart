@@ -11,6 +11,7 @@ interface AppState {
   favorites: string[];
   setUser: (user: User | null) => void;
   setProducts: (products: Product[]) => void;
+  updateProduct: (product: Product) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
@@ -44,6 +45,9 @@ export const useAppStore = create<AppState>()(
       favorites: [],
       setUser: (user) => set({ user }),
       setProducts: (products) => set({ products }),
+      updateProduct: (product) => set((state) => ({
+        products: state.products.map(p => p.id === product.id ? product : p)
+      })),
       addToCart: (product) => set((state) => {
         const existing = state.cart.find(i => i.productId === product.id);
         if (existing) {
