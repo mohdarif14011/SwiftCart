@@ -21,11 +21,14 @@ import {
   Loader2,
   Mail,
   Lock,
-  Phone
+  Phone,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -33,6 +36,16 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
+
+const CATEGORIES = [
+  'Vegetables',
+  'Fruits',
+  'Dairy',
+  'Bakery',
+  'Snacks',
+  'Home Essentials',
+  'Kitchen Essentials',
+];
 
 export default function AdminDashboard() {
   const { products, setProducts, setUser } = useAppStore();
@@ -47,7 +60,13 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Form states for adding product
-  const [prodForm, setProdForm] = useState({ name: '', category: '', price: '', inventory: '10' });
+  const [prodForm, setProdForm] = useState({ 
+    name: '', 
+    category: '', 
+    price: '', 
+    imageUrl: '',
+    isInStock: true 
+  });
   
   // Form states for adding agent
   const [agentForm, setAgentForm] = useState({ 
@@ -102,7 +121,10 @@ export default function AdminDashboard() {
   };
 
   const handleAddProduct = () => {
-    if (!prodForm.name || !prodForm.category || !prodForm.price) return;
+    if (!prodForm.name || !prodForm.category || !prodForm.price) {
+      toast({ variant: "destructive", title: "Error", description: "Name, Category, and Price are required." });
+      return;
+    }
     
     setIsAddingProduct(true);
     const newProduct = {
@@ -110,14 +132,14 @@ export default function AdminDashboard() {
       name: prodForm.name,
       category: prodForm.category,
       price: parseFloat(prodForm.price),
-      inventory: parseInt(prodForm.inventory),
-      imageUrl: `https://picsum.photos/seed/${prodForm.name}/300/300`,
+      inventory: prodForm.isInStock ? 99 : 0, // Using inventory 0 for out of stock
+      imageUrl: prodForm.imageUrl || `https://picsum.photos/seed/${prodForm.name}/300/300`,
       description: `Freshly stocked ${prodForm.name}`
     };
 
     setProducts([...products, newProduct]);
     toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
-    setProdForm({ name: '', category: '', price: '', inventory: '10' });
+    setProdForm({ name: '', category: '', price: '', imageUrl: '', isInStock: true });
     setIsAddingProduct(false);
   };
 
@@ -268,41 +290,63 @@ export default function AdminDashboard() {
                           onChange={(e) => setProdForm({...prodForm, name: e.target.value})}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="category">Category</Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="category">Category</Label>
+                        <Select 
+                          onValueChange={(val) => setProdForm({...prodForm, category: val})}
+                          value={prodForm.category}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORIES.map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="price">Price ($)</Label>
+                        <Input 
+                          id="price" 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="4.99" 
+                          value={prodForm.price}
+                          onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="imageUrl">Product Image URL</Label>
+                        <div className="relative">
+                          <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input 
-                            id="category" 
-                            placeholder="Fruits" 
-                            value={prodForm.category}
-                            onChange={(e) => setProdForm({...prodForm, category: e.target.value})}
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="price">Price ($)</Label>
-                          <Input 
-                            id="price" 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="4.99" 
-                            value={prodForm.price}
-                            onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
+                            id="imageUrl" 
+                            className="pl-10"
+                            placeholder="https://images.unsplash.com/..." 
+                            value={prodForm.imageUrl}
+                            onChange={(e) => setProdForm({...prodForm, imageUrl: e.target.value})}
                           />
                         </div>
                       </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="stock">Initial Stock</Label>
-                        <Input 
-                          id="stock" 
-                          type="number" 
-                          value={prodForm.inventory}
-                          onChange={(e) => setProdForm({...prodForm, inventory: e.target.value})}
-                        />
+                      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg">
+                        <div className="space-y-0.5">
+                          <Label>Stock Status</Label>
+                          <p className="text-[10px] text-muted-foreground">Is this item available for purchase?</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium">{prodForm.isInStock ? 'In Stock' : 'Out of Stock'}</span>
+                          <Switch 
+                            checked={prodForm.isInStock}
+                            onCheckedChange={(checked) => setProdForm({...prodForm, isInStock: checked})}
+                          />
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleAddProduct} disabled={isAddingProduct} className="w-full bg-primary">
-                        {isAddingProduct ? <Loader2 className="animate-spin" /> : "Create Listing"}
+                      <Button onClick={handleAddProduct} disabled={isAddingProduct} className="w-full bg-primary h-12 font-bold">
+                        {isAddingProduct ? <Loader2 className="animate-spin" /> : "Create Product Listing"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -327,7 +371,7 @@ export default function AdminDashboard() {
                         <TableHead>Product</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Price</TableHead>
-                        <TableHead>Stock</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -348,7 +392,13 @@ export default function AdminDashboard() {
                             </span>
                           </TableCell>
                           <TableCell>${product.price.toFixed(2)}</TableCell>
-                          <TableCell>{product.inventory}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              product.inventory > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {product.inventory > 0 ? 'In Stock' : 'Out of Stock'}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10">
                               <Edit className="h-4 w-4" />
