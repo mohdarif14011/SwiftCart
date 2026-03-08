@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -225,42 +224,16 @@ export default function DeliveryDashboard() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-xl bg-slate-900 text-white rounded-[2.5rem] overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <DollarSign className="h-24 w-24" />
-            </div>
+          <Card className="border-none shadow-sm bg-white rounded-[2rem] overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-white/40">Earnings Today</CardTitle>
+              <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Earnings Today</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-5xl font-bold tracking-tighter">₹{todayEarnings.toFixed(2)}</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Orders</p>
-                  <p className="text-2xl font-bold">{historyOrders.length}</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Bonus</p>
-                  <p className="text-2xl font-bold text-accent">₹0</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" /> Active Feed
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border-l-4 border-primary space-y-1">
-                <p className="text-xs font-bold text-slate-900">Weekend Surge!</p>
-                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Earn an extra ₹50 for every delivery completed after 8 PM tonight.</p>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border-l-4 border-accent space-y-1">
-                <p className="text-xs font-bold text-slate-900">System Alert</p>
-                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Please ensure you have sufficient change for cash-on-delivery orders.</p>
+            <CardContent className="space-y-2">
+              <p className="text-4xl font-bold tracking-tight text-primary">₹{todayEarnings.toFixed(2)}</p>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-slate-50 text-slate-500 text-[10px] font-bold border-none px-2 py-0.5">
+                  {historyOrders.length} Completed Orders
+                </Badge>
               </div>
             </CardContent>
           </Card>
