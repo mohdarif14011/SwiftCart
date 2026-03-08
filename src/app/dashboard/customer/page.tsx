@@ -37,7 +37,8 @@ import {
   Phone,
   Building2,
   Box,
-  Truck
+  Truck,
+  Navigation
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -190,7 +191,7 @@ export default function CustomerDashboard() {
 
     setDocumentNonBlocking(doc(db, 'customers', firebaseUser.uid), profileData, { merge: true });
 
-    toast({ title: "Profile Saved", description: "Your delivery details are set." });
+    toast({ title: "Profile Saved", description: "Your delivery details and coordinates are set." });
     setHasDismissedOnboarding(true);
     setIsManualNavigation(false);
     setCurrentView('home');
@@ -388,6 +389,15 @@ export default function CustomerDashboard() {
                       value={onboardingForm.nearby}
                       onChange={(e) => setOnboardingForm({...onboardingForm, nearby: e.target.value})}
                     />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Pinned Coordinates</label>
+                  <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-2xl">
+                    <Navigation className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-bold text-slate-600">
+                      {gpsLocation ? `${gpsLocation.lat.toFixed(4)}, ${gpsLocation.lng.toFixed(4)}` : 'No location pinned'}
+                    </span>
                   </div>
                 </div>
               </div>
