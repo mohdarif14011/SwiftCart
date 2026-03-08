@@ -1,93 +1,101 @@
-
 {
   "entities": {
-    "Customer": {
+    "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Customer",
+      "title": "User",
       "type": "object",
-      "description": "Represents a customer's profile in the SwiftCart application, linked to an external authentication system. This entity stores personal and contact details for the customer.",
+      "description": "Represents a registered user of the SwiftCart application. Stores essential profile information, but no authentication details.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Customer entity, typically provided by an external authentication system for the user's profile."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the customer."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the customer."
+          "description": "Unique identifier for the User entity."
         },
         "email": {
           "type": "string",
-          "description": "The primary email address of the customer for contact and profile display (not used for authentication credentials).",
+          "description": "The user's email address, used for communication.",
           "format": "email"
         },
-        "phone": {
+        "firstName": {
           "type": "string",
-          "description": "The phone number of the customer."
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's contact phone number."
+        },
+        "defaultDeliveryAddressId": {
+          "type": "string",
+          "description": "Reference to the user's default delivery address. (Relationship: User 1:N UserAddress)",
+          "format": "uuid"
         }
       },
       "required": [
         "id",
-        "firstName",
-        "lastName",
         "email",
-        "phone"
+        "firstName",
+        "lastName"
       ]
     },
-    "CustomerAddress": {
+    "UserAddress": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CustomerAddress",
+      "title": "UserAddress",
       "type": "object",
-      "description": "Represents a physical address associated with a customer, used for delivery or billing purposes.",
+      "description": "Stores a specific delivery or billing address associated with a user, allowing multiple saved addresses.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the CustomerAddress entity."
+          "description": "Unique identifier for the UserAddress entity."
         },
-        "customerId": {
+        "userId": {
           "type": "string",
-          "description": "Reference to the Customer profile this address belongs to. (Relationship: Customer 1:N CustomerAddress)"
+          "description": "Reference to the user who owns this address. (Relationship: User 1:N UserAddress)",
+          "format": "uuid"
         },
-        "addressType": {
+        "name": {
           "type": "string",
-          "description": "The type of address, e.g., 'Home', 'Work', 'Other'."
+          "description": "A recognizable name for the address (e.g., 'Home', 'Work')."
         },
-        "street": {
+        "addressLine1": {
           "type": "string",
-          "description": "The street name and house/apartment number."
+          "description": "The primary street address line."
+        },
+        "addressLine2": {
+          "type": "string",
+          "description": "Secondary street address line (e.g., apartment, suite number)."
         },
         "city": {
           "type": "string",
-          "description": "The city where the address is located."
+          "description": "The city of the address."
         },
         "state": {
           "type": "string",
-          "description": "The state or province where the address is located."
+          "description": "The state, province, or region of the address."
         },
-        "zipCode": {
+        "postalCode": {
           "type": "string",
-          "description": "The postal or ZIP code of the address."
+          "description": "The postal or zip code of the address."
         },
         "country": {
           "type": "string",
-          "description": "The country where the address is located."
+          "description": "The country of the address."
         },
         "isDefault": {
           "type": "boolean",
-          "description": "Indicates if this is the customer's default delivery address."
+          "description": "Indicates if this is the user's default delivery address."
         }
       },
       "required": [
         "id",
-        "customerId",
-        "addressType",
-        "street",
+        "userId",
+        "name",
+        "addressLine1",
         "city",
         "state",
-        "zipCode",
+        "postalCode",
         "country",
         "isDefault"
       ]
@@ -96,7 +104,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Category",
       "type": "object",
-      "description": "Represents a product category used to organize and browse items in the product catalog.",
+      "description": "Defines a category for organizing products within the catalog.",
       "properties": {
         "id": {
           "type": "string",
@@ -104,11 +112,16 @@
         },
         "name": {
           "type": "string",
-          "description": "The name of the product category, e.g., 'Fruits & Vegetables', 'Dairy & Eggs'."
+          "description": "The name of the category (e.g., 'Dairy & Eggs', 'Electronics')."
         },
         "description": {
           "type": "string",
-          "description": "A brief description of what the category entails."
+          "description": "A brief description of the category."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to an image representing the category.",
+          "format": "uri"
         }
       },
       "required": [
@@ -121,7 +134,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a product available for purchase in the SwiftCart application's catalog.",
+      "description": "Represents a single product available for purchase in the SwiftCart catalog.",
       "properties": {
         "id": {
           "type": "string",
@@ -133,28 +146,25 @@
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the product, including its features and characteristics."
+          "description": "A detailed description of the product."
         },
         "price": {
           "type": "number",
           "description": "The current selling price of the product."
         },
-        "stockQuantity": {
-          "type": "number",
-          "description": "The current number of units of the product available in stock."
-        },
         "imageUrl": {
           "type": "string",
-          "description": "The URL to the main image of the product.",
+          "description": "URL to the primary image of the product.",
           "format": "uri"
+        },
+        "stockQuantity": {
+          "type": "number",
+          "description": "The number of units of this product currently in stock."
         },
         "categoryId": {
           "type": "string",
-          "description": "Reference to the Category this product belongs to. (Relationship: Category 1:N Product)"
-        },
-        "unitOfMeasure": {
-          "type": "string",
-          "description": "The unit of measure for the product, e.g., 'kg', 'pcs', 'liter', 'pack'."
+          "description": "Reference to the category this product belongs to. (Relationship: Category 1:N Product)",
+          "format": "uuid"
         }
       },
       "required": [
@@ -162,40 +172,40 @@
         "name",
         "description",
         "price",
-        "stockQuantity",
         "imageUrl",
-        "categoryId",
-        "unitOfMeasure"
+        "stockQuantity",
+        "categoryId"
       ]
     },
     "Cart": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Cart",
       "type": "object",
-      "description": "Represents a customer's current shopping cart, holding products selected for potential purchase.",
+      "description": "Represents a user's current shopping cart, holding items they intend to purchase.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the Cart entity."
         },
-        "customerId": {
+        "userId": {
           "type": "string",
-          "description": "Reference to the Customer who owns this cart. (Relationship: Customer 1:N Cart)"
+          "description": "Reference to the user who owns this cart. (Relationship: User 1:1 Cart)",
+          "format": "uuid"
         },
         "createdAt": {
           "type": "string",
-          "description": "The timestamp when the cart was initially created.",
+          "description": "Timestamp when the cart was created.",
           "format": "date-time"
         },
         "updatedAt": {
           "type": "string",
-          "description": "The timestamp when the cart was last updated with changes.",
+          "description": "Timestamp of the last modification to the cart.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "customerId",
+        "userId",
         "createdAt",
         "updatedAt"
       ]
@@ -204,7 +214,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CartItem",
       "type": "object",
-      "description": "Represents a single product entry within a customer's shopping cart, including the quantity.",
+      "description": "Represents a single product and its quantity within a user's shopping cart.",
       "properties": {
         "id": {
           "type": "string",
@@ -212,33 +222,168 @@
         },
         "cartId": {
           "type": "string",
-          "description": "Reference to the Cart this item belongs to. (Relationship: Cart 1:N CartItem)"
+          "description": "Reference to the cart this item belongs to. (Relationship: Cart 1:N CartItem)",
+          "format": "uuid"
         },
         "productId": {
           "type": "string",
-          "description": "Reference to the Product added to the cart. (Relationship: Product 1:N CartItem)"
+          "description": "Reference to the product being added to the cart. (Relationship: Product 1:N CartItem)",
+          "format": "uuid"
         },
         "quantity": {
           "type": "number",
-          "description": "The number of units of the product in the cart."
+          "description": "The quantity of the product in the cart."
+        },
+        "priceAtTimeOfAddition": {
+          "type": "number",
+          "description": "The price of the product when it was added to the cart, for historical accuracy."
         }
       },
       "required": [
         "id",
         "cartId",
         "productId",
-        "quantity"
+        "quantity",
+        "priceAtTimeOfAddition"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a completed purchase by a user, including delivery details and status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Order entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the user who placed the order. (Relationship: User 1:N Order)",
+          "format": "uuid"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "Timestamp when the order was placed.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total monetary amount of the order, including all items and any taxes/fees."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the order (e.g., 'Pending', 'Confirmed', 'Out for Delivery', 'Delivered')."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The chosen payment method for the order (e.g., 'Credit Card', 'Cash on Delivery')."
+        },
+        "deliveryRecipientName": {
+          "type": "string",
+          "description": "The name of the recipient for delivery."
+        },
+        "deliveryAddressLine1": {
+          "type": "string",
+          "description": "The primary street address line for delivery."
+        },
+        "deliveryAddressLine2": {
+          "type": "string",
+          "description": "Secondary street address line for delivery (e.g., apartment, suite number)."
+        },
+        "deliveryCity": {
+          "type": "string",
+          "description": "The city for delivery."
+        },
+        "deliveryState": {
+          "type": "string",
+          "description": "The state, province, or region for delivery."
+        },
+        "deliveryPostalCode": {
+          "type": "string",
+          "description": "The postal or zip code for delivery."
+        },
+        "deliveryCountry": {
+          "type": "string",
+          "description": "The country for delivery."
+        },
+        "deliveryAgentId": {
+          "type": "string",
+          "description": "Reference to the delivery agent assigned to this order. (Relationship: DeliveryAgent 1:N Order)",
+          "format": "uuid"
+        },
+        "estimatedDeliveryDate": {
+          "type": "string",
+          "description": "The estimated date and time for order delivery.",
+          "format": "date-time"
+        },
+        "actualDeliveryDate": {
+          "type": "string",
+          "description": "The actual date and time when the order was delivered.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "orderDate",
+        "totalAmount",
+        "status",
+        "paymentMethod",
+        "deliveryRecipientName",
+        "deliveryAddressLine1",
+        "deliveryCity",
+        "deliveryState",
+        "deliveryPostalCode",
+        "deliveryCountry"
+      ]
+    },
+    "OrderItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OrderItem",
+      "type": "object",
+      "description": "Represents a single product and its quantity as part of a placed order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OrderItem entity."
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Reference to the order this item belongs to. (Relationship: Order 1:N OrderItem)",
+          "format": "uuid"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the product included in the order. (Relationship: Product 1:N OrderItem)",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product ordered."
+        },
+        "priceAtTimeOfOrder": {
+          "type": "number",
+          "description": "The price of the product at the time the order was placed."
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "productId",
+        "quantity",
+        "priceAtTimeOfOrder"
       ]
     },
     "DeliveryAgent": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DeliveryAgent",
       "type": "object",
-      "description": "Represents a delivery agent's profile, linked to an external authentication system. This entity stores agent-specific details and their real-time location for order tracking.",
+      "description": "Represents a delivery agent responsible for fulfilling orders.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the DeliveryAgent entity, typically provided by an external authentication system for the agent's profile."
+          "description": "Unique identifier for the DeliveryAgent entity."
         },
         "firstName": {
           "type": "string",
@@ -248,212 +393,123 @@
           "type": "string",
           "description": "The last name of the delivery agent."
         },
-        "phone": {
+        "phoneNumber": {
           "type": "string",
-          "description": "The phone number of the delivery agent."
+          "description": "The contact phone number of the delivery agent."
         },
-        "vehicleType": {
+        "vehicleDetails": {
           "type": "string",
-          "description": "The type of vehicle used by the delivery agent (e.g., 'Car', 'Bike', 'Van')."
-        },
-        "licensePlate": {
-          "type": "string",
-          "description": "The license plate number of the delivery agent's vehicle."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current operational status of the delivery agent (e.g., 'Available', 'On Delivery', 'Offline')."
+          "description": "Details about the agent's delivery vehicle (e.g., 'Bike - KA01AB1234')."
         },
         "currentLatitude": {
           "type": "number",
-          "description": "The current latitude coordinate of the delivery agent for live tracking. Nullable if the agent is offline or not actively tracking."
+          "description": "The current latitude of the delivery agent for live tracking."
         },
         "currentLongitude": {
           "type": "number",
-          "description": "The current longitude coordinate of the delivery agent for live tracking. Nullable if the agent is offline or not actively tracking."
-        }
-      },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "phone",
-        "vehicleType",
-        "status"
-      ]
-    },
-    "Order": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Order",
-      "type": "object",
-      "description": "Represents a confirmed order placed by a customer, including delivery details and status.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Order entity."
-        },
-        "customerId": {
-          "type": "string",
-          "description": "Reference to the Customer who placed this order. (Relationship: Customer 1:N Order)"
-        },
-        "deliveryAddressId": {
-          "type": "string",
-          "description": "Reference to the CustomerAddress selected for this specific order's delivery. (Relationship: CustomerAddress 1:N Order)"
-        },
-        "orderDate": {
-          "type": "string",
-          "description": "The date and time when the order was placed.",
-          "format": "date-time"
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total monetary amount of the order, including product costs, taxes, and delivery fees."
+          "description": "The current longitude of the delivery agent for live tracking."
         },
         "status": {
           "type": "string",
-          "description": "The current fulfillment status of the order (e.g., 'Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled')."
-        },
-        "deliveryAgentId": {
-          "type": "string",
-          "description": "Reference to the DeliveryAgent assigned to fulfill this order. Nullable if no agent is yet assigned. (Relationship: DeliveryAgent 1:N Order)"
-        },
-        "estimatedDeliveryTime": {
-          "type": "string",
-          "description": "The estimated date and time for the order's delivery.",
-          "format": "date-time"
-        },
-        "actualDeliveryTime": {
-          "type": "string",
-          "description": "The actual date and time when the order was successfully delivered.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "customerId",
-        "deliveryAddressId",
-        "orderDate",
-        "totalAmount",
-        "status"
-      ]
-    },
-    "OrderItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OrderItem",
-      "type": "object",
-      "description": "Represents a single product item included in a confirmed order, capturing its state at the time of purchase for historical accuracy.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the OrderItem entity."
-        },
-        "orderId": {
-          "type": "string",
-          "description": "Reference to the Order this item belongs to. (Relationship: Order 1:N OrderItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product that was part of the order. (Relationship: Product 1:N OrderItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product ordered."
-        },
-        "priceAtOrder": {
-          "type": "number",
-          "description": "The price of the product at the exact moment the order was placed, for historical record keeping."
-        },
-        "productNameAtOrder": {
-          "type": "string",
-          "description": "The name of the product at the exact moment the order was placed, for historical record keeping."
-        }
-      },
-      "required": [
-        "id",
-        "orderId",
-        "productId",
-        "quantity",
-        "priceAtOrder",
-        "productNameAtOrder"
-      ]
-    },
-    "Admin": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Admin",
-      "type": "object",
-      "description": "Represents an administrator's profile in the SwiftCart application, linked to an external authentication system. Admins have privileged access to manage various aspects of the application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Admin entity, typically provided by an external authentication system for the admin's profile."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the administrator."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the administrator."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the administrator for contact and profile display.",
-          "format": "email"
+          "description": "The current availability status of the delivery agent (e.g., 'Available', 'On Delivery', 'Offline')."
         }
       },
       "required": [
         "id",
         "firstName",
         "lastName",
-        "email"
+        "phoneNumber",
+        "vehicleDetails",
+        "currentLatitude",
+        "currentLongitude",
+        "status"
       ]
     },
     "ShoppingList": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ShoppingList",
       "type": "object",
-      "description": "Represents a smart shopping list generated for a customer, potentially based on AI suggestions or user input.",
+      "description": "Represents a user-specific shopping list, potentially generated or refined by AI.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the ShoppingList entity."
         },
-        "customerId": {
+        "userId": {
           "type": "string",
-          "description": "Reference to the Customer who owns this shopping list. (Relationship: Customer 1:N ShoppingList)"
+          "description": "Reference to the user who owns this shopping list. (Relationship: User 1:N ShoppingList)",
+          "format": "uuid"
         },
         "name": {
           "type": "string",
-          "description": "A user-defined name for the shopping list (e.g., 'Weekly Groceries', 'Dinner Party List')."
-        },
-        "generatedContent": {
-          "type": "string",
-          "description": "The free-text or AI-generated content of the shopping list, containing suggested items or meal ideas."
+          "description": "A descriptive name for the shopping list (e.g., 'Weekly Groceries', 'Dinner Party Ingredients')."
         },
         "createdAt": {
           "type": "string",
-          "description": "The timestamp when the shopping list was created.",
+          "description": "Timestamp when the shopping list was created.",
           "format": "date-time"
         },
         "updatedAt": {
           "type": "string",
-          "description": "The timestamp when the shopping list was last updated.",
+          "description": "Timestamp of the last modification to the shopping list.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "customerId",
+        "userId",
         "name",
-        "generatedContent",
         "createdAt",
         "updatedAt"
+      ]
+    },
+    "ShoppingListItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShoppingListItem",
+      "type": "object",
+      "description": "Represents an item within a user's smart shopping list, which can be a free-text description or linked to a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ShoppingListItem entity."
+        },
+        "shoppingListId": {
+          "type": "string",
+          "description": "Reference to the shopping list this item belongs to. (Relationship: ShoppingList 1:N ShoppingListItem)",
+          "format": "uuid"
+        },
+        "description": {
+          "type": "string",
+          "description": "A free-text description of the item, potentially AI-generated (e.g., '2 lbs organic chicken breast')."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Optional reference to an existing product in the catalog if the item matches one. (Relationship: Product 1:N ShoppingListItem)",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The suggested quantity for the item."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement for the quantity (e.g., 'lbs', 'units', 'pieces')."
+        },
+        "isPurchased": {
+          "type": "boolean",
+          "description": "Indicates if the item has been marked as purchased or added to cart."
+        }
+      },
+      "required": [
+        "id",
+        "shoppingListId",
+        "description",
+        "isPurchased"
       ]
     }
   },
   "auth": {
     "providers": [
-      "google",
       "password",
       "anonymous"
     ]
@@ -461,209 +517,37 @@
   "firestore": {
     "structure": [
       {
-        "path": "/customers/{customerId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Customer",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/Customer"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Stores individual customer profiles. The `customerId` corresponds to `request.auth.uid`. Private data for the customer, manageable by Admins.",
+          "description": "Stores individual user profile information. The document ID `{userId}` must match the Firebase Authentication UID. Authorization ensures only the user can read/write their own profile.",
           "params": [
             {
-              "name": "customerId",
-              "description": "The unique ID of the customer, matching their Firebase Authentication UID."
+              "name": "userId",
+              "description": "The unique identifier of the user, matching Firebase Authentication UID."
             }
           ]
         }
       },
       {
-        "path": "/customers/{customerId}/addresses/{addressId}",
+        "path": "/users/{userId}/addresses/{addressId}",
         "definition": {
-          "entityName": "CustomerAddress",
+          "entityName": "UserAddress",
           "schema": {
-            "$ref": "#/backend/entities/CustomerAddress"
+            "$ref": "#/backend/entities/UserAddress"
           },
-          "description": "Stores delivery and billing addresses for a specific customer. Access is restricted to the owning customer and Admins. Includes denormalized 'customerId' for authorization independence.",
+          "description": "A subcollection for a user's saved delivery and billing addresses. Includes denormalized 'userId' for authorization independence, allowing direct verification of ownership.",
           "params": [
             {
-              "name": "customerId",
-              "description": "The unique ID of the customer, matching their Firebase Authentication UID."
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this address."
             },
             {
               "name": "addressId",
-              "description": "The unique ID of the customer's address."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/shoppingLists/{listId}",
-        "definition": {
-          "entityName": "ShoppingList",
-          "schema": {
-            "$ref": "#/backend/entities/ShoppingList"
-          },
-          "description": "Stores AI-generated or user-created shopping lists for a specific customer. Access is restricted to the owning customer and Admins. Includes denormalized 'customerId' for authorization independence.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique ID of the customer, matching their Firebase Authentication UID."
-            },
-            {
-              "name": "listId",
-              "description": "The unique ID of the shopping list."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/carts/{cartId}",
-        "definition": {
-          "entityName": "Cart",
-          "schema": {
-            "$ref": "#/backend/entities/Cart"
-          },
-          "description": "Stores a customer's active shopping cart. Access is restricted to the owning customer and Admins. Includes denormalized 'customerId' for authorization independence.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique ID of the customer, matching their Firebase Authentication UID."
-            },
-            {
-              "name": "cartId",
-              "description": "The unique ID of the shopping cart."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/carts/{cartId}/items/{cartItemId}",
-        "definition": {
-          "entityName": "CartItem",
-          "schema": {
-            "$ref": "#/backend/entities/CartItem"
-          },
-          "description": "Stores individual items within a specific customer's shopping cart. Access is restricted to the owning customer and Admins. MUST include denormalized 'customerId' (from its parent Cart) for authorization independence.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique ID of the customer who owns the cart."
-            },
-            {
-              "name": "cartId",
-              "description": "The unique ID of the shopping cart."
-            },
-            {
-              "name": "cartItemId",
-              "description": "The unique ID of the cart item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/orders/{orderId}",
-        "definition": {
-          "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Stores confirmed orders placed by a customer. Accessible by the owning customer, assigned Delivery Agent, and Admins. Includes denormalized 'customerId' for customer access and 'deliveryAgentId' for agent-specific access (authorization independence).",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique ID of the customer who placed the order."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique ID of the order."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/orders/{orderId}/items/{orderItemId}",
-        "definition": {
-          "entityName": "OrderItem",
-          "schema": {
-            "$ref": "#/backend/entities/OrderItem"
-          },
-          "description": "Stores individual items within a confirmed order. Accessible by the owning customer, assigned Delivery Agent, and Admins. MUST include denormalized 'customerId' (from its parent Order) for authorization independence.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique ID of the customer who owns the order."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique ID of the order."
-            },
-            {
-              "name": "orderItemId",
-              "description": "The unique ID of the order item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/deliveryAgents/{deliveryAgentId}",
-        "definition": {
-          "entityName": "DeliveryAgent",
-          "schema": {
-            "$ref": "#/backend/entities/DeliveryAgent"
-          },
-          "description": "Stores profiles for delivery agents. The `deliveryAgentId` corresponds to `request.auth.uid`. Writable by the agent themselves, readable by Admins. 'currentLatitude' and 'currentLongitude' are for general agent status, not specific order tracking.",
-          "params": [
-            {
-              "name": "deliveryAgentId",
-              "description": "The unique ID of the delivery agent, matching their Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/admins/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/Admin"
-          },
-          "description": "Stores profiles for administrators. The `adminId` corresponds to `request.auth.uid`. Writable and readable only by other Admins.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique ID of the administrator, matching their Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/Admin"
-          },
-          "description": "A lightweight collection used solely for role-based access control. The existence of a document with `adminId` (matching `request.auth.uid`) grants administrative privileges. This uses 'Existence over Content' for DBAC.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique ID of the administrator, matching their Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_delivery_agent/{deliveryAgentId}",
-        "definition": {
-          "entityName": "DeliveryAgent",
-          "schema": {
-            "$ref": "#/backend/entities/DeliveryAgent"
-          },
-          "description": "A lightweight collection used solely for role-based access control. The existence of a document with `deliveryAgentId` (matching `request.auth.uid`) grants delivery agent privileges. This uses 'Existence over Content' for DBAC.",
-          "params": [
-            {
-              "name": "deliveryAgentId",
-              "description": "The unique ID of the delivery agent, matching their Firebase Authentication UID."
+              "description": "The unique identifier for a specific user address."
             }
           ]
         }
@@ -675,11 +559,11 @@
           "schema": {
             "$ref": "#/backend/entities/Category"
           },
-          "description": "Stores product categories. Publicly readable by all users, writable only by Admins.",
+          "description": "A top-level collection for product categories. Publicly readable for all users, writable only by administrators.",
           "params": [
             {
               "name": "categoryId",
-              "description": "The unique ID of the product category."
+              "description": "The unique identifier for a product category."
             }
           ]
         }
@@ -691,31 +575,196 @@
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores product details for the catalog. Publicly readable by all users, writable only by Admins.",
+          "description": "A top-level collection for all products in the catalog. Publicly readable for all users, writable only by administrators.",
           "params": [
             {
               "name": "productId",
-              "description": "The unique ID of the product."
+              "description": "The unique identifier for a specific product."
             }
           ]
         }
       },
       {
-        "path": "/deliveryTracks/{orderId}",
+        "path": "/users/{userId}/carts/{cartId}",
         "definition": {
-          "entityName": "DeliveryTrack",
+          "entityName": "Cart",
+          "schema": {
+            "$ref": "#/backend/entities/Cart"
+          },
+          "description": "Stores a user's current shopping cart. Includes denormalized 'userId' for authorization independence. Typically, 'cartId' may correspond to 'userId' for a 1:1 relationship.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this cart."
+            },
+            {
+              "name": "cartId",
+              "description": "The unique identifier for the user's cart."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/carts/{cartId}/items/{cartItemId}",
+        "definition": {
+          "entityName": "CartItem",
+          "schema": {
+            "$ref": "#/backend/entities/CartItem"
+          },
+          "description": "Items within a user's shopping cart. Requires denormalized 'userId' (from the parent Cart) within each document for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent cart."
+            },
+            {
+              "name": "cartId",
+              "description": "The unique identifier of the parent cart."
+            },
+            {
+              "name": "cartItemId",
+              "description": "The unique identifier for a specific item in the cart."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
           "schema": {
             "$ref": "#/backend/entities/Order"
           },
-          "description": "A dedicated collection for real-time order tracking. Each document represents an active delivery session and contains denormalized 'customerId', 'deliveryAgentId', and the agent's live location. Writable by the assigned Delivery Agent, readable by the owning Customer. Designed for authorization independence for live tracking data.",
+          "description": "Stores a user's placed orders. Includes denormalized 'userId' for authorization independence. Also includes 'deliveryAgentId' to facilitate queries by delivery agents for assigned orders.",
           "params": [
             {
+              "name": "userId",
+              "description": "The unique identifier of the user who placed this order."
+            },
+            {
               "name": "orderId",
-              "description": "The unique ID of the order being tracked. This also serves as the document ID."
+              "description": "The unique identifier for a specific order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}/items/{orderItemId}",
+        "definition": {
+          "entityName": "OrderItem",
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
+          "description": "Items within a user's order. Requires denormalized 'userId' (from the parent Order) within each document for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who placed the parent order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier of the parent order."
+            },
+            {
+              "name": "orderItemId",
+              "description": "The unique identifier for a specific item in the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/delivery_agents/{agentId}",
+        "definition": {
+          "entityName": "DeliveryAgent",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryAgent"
+          },
+          "description": "Stores profiles and real-time location/status of delivery agents. Agents can update their own document (where 'agentId' matches their UID); customers can read for order tracking; administrators manage.",
+          "params": [
+            {
+              "name": "agentId",
+              "description": "The unique identifier for a specific delivery agent, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/shopping_lists/{listId}",
+        "definition": {
+          "entityName": "ShoppingList",
+          "schema": {
+            "$ref": "#/backend/entities/ShoppingList"
+          },
+          "description": "Stores user-specific smart shopping lists. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this shopping list."
+            },
+            {
+              "name": "listId",
+              "description": "The unique identifier for a specific shopping list."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/shopping_lists/{listId}/items/{listItemId}",
+        "definition": {
+          "entityName": "ShoppingListItem",
+          "schema": {
+            "$ref": "#/backend/entities/ShoppingListItem"
+          },
+          "description": "Items within a user's smart shopping list. Requires denormalized 'userId' (from the parent ShoppingList) within each document for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent shopping list."
+            },
+            {
+              "name": "listId",
+              "description": "The unique identifier of the parent shopping list."
+            },
+            {
+              "name": "listItemId",
+              "description": "The unique identifier for a specific item in the shopping list."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "A collection used for role-based access control. The existence of a document at this path indicates that the user with `{userId}` has 'Admin' privileges. Writable only by existing administrators or trusted cloud functions.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who holds the Admin role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_delivery_agent/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "A collection used for role-based access control. The existence of a document at this path indicates that the user with `{userId}` has 'Delivery Agent' privileges. Writable only by administrators or trusted cloud functions.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who holds the Delivery Agent role."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure for SwiftCart is designed to be secure, scalable, and debuggable, strictly adhering to the core design principles. The primary strategy employed is **Authorization Independence via Denormalization** and **Structural Segregation** to simplify security rules and ensure Query-Able Permissions (QAPs).\n\n**Authorization Independence (CRITICAL):**\nTo avoid hierarchical authorization dependencies (i.e., `get()` calls in security rules), crucial authorization contexts are denormalized directly into relevant documents:\n\n1.  **Customer-Owned Subcollections:** For subcollections under a customer's path (e.g., `addresses`, `shoppingLists`, `carts`, `orders`), the `customerId` from the parent path (`/customers/{customerId}/...`) is explicitly included in each subcollection document. For `CustomerAddress`, `ShoppingList`, `Cart`, and `Order`, the `customerId` field already exists in their respective schemas, making access rules straightforward (`resource.data.customerId == request.auth.uid`).\n2.  **Nested Items Denormalization:** For `CartItem` and `OrderItem` entities, which are nested deeper (`/customers/{customerId}/carts/{cartId}/items/{cartItemId}` and `/customers/{customerId}/orders/{orderId}/items/{orderItemId}`), the `customerId` of the cart/order owner will be denormalized and stored directly within each `CartItem` and `OrderItem` document. This allows security rules to check `resource.data.customerId == request.auth.uid` directly on the item, eliminating the need to `get()` the parent `Cart` or `Order` document for authorization checks. This ensures atomic operations and robust security.\n3.  **Live Location Tracking:** To facilitate secure and independent live location tracking for customers and delivery agents without complex hierarchical lookups, a dedicated `/deliveryTracks/{orderId}` collection is introduced. Each document in this collection will contain the `customerId`, `deliveryAgentId`, and the agent's current location. This allows the delivery agent to update *only* the `deliveryTracks` document where `resource.data.deliveryAgentId == request.auth.uid`, and the customer to read *only* the `deliveryTracks` document where `resource.data.customerId == request.auth.uid`. This cleanly segregates tracking data and authorization.\n4.  **Order Access for Delivery Agents:** The `Order` document itself (`/customers/{customerId}/orders/{orderId}`) includes `deliveryAgentId`. This denormalized field allows a delivery agent to directly check if `request.auth.uid == resource.data.deliveryAgentId` to read or update their assigned orders, without needing to `get()` any other collection for authorization.\n\n**Query-Able Permissions (QAPs):**\nQAPs are achieved through **Structural Segregation** and **Path-Based Ownership**:\n\n1.  **User-Specific Data:** All customer-private data (addresses, shopping lists, carts, orders) is stored under `/customers/{customerId}/...`. This path-based ownership inherently ensures that `list` operations on these collections (e.g., `db.collection('customers').doc(uid).collection('orders').get()`) will *only* return data owned by `request.auth.uid`, as defined by the path itself. The denormalized `customerId` in `CartItem` and `OrderItem` further strengthens this for nested lists.\n2.  **Role-Based Access (DBAC):** Roles (Admin, Delivery Agent) are managed via dedicated top-level collections: `/roles_admin/{adminId}` and `/roles_delivery_agent/{deliveryAgentId}`. A user's role is determined by the *existence* of their `uid` as a document ID in the respective role collection. This allows security rules to perform simple `exists()` checks for role-based authorization (e.g., `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`), ensuring efficient and secure access control for privileged operations and `list` queries for administrative interfaces.\n3.  **Public Data Segregation:** Publicly accessible data like `Category` and `Product` are stored in root-level collections (`/categories`, `/products`). These collections are readable by all authenticated users (or even unauthenticated users, depending on specific rules), but writable only by `admin`s. This segregation ensures that public listings are performant and secure without intermixing with private data.\n4.  **Delivery Agent Orders:** Delivery agents can `list` orders they are assigned to by querying `/customers/{customerId}/orders` with a `where('deliveryAgentId', '==', request.auth.uid)` filter. The security rules will allow `list` if the `deliveryAgentId` matches `request.auth.uid`, ensuring agents only retrieve their relevant orders.\n\nBy following these strategies, the Firestore structure provides a clear, highly secure, and easily debuggable foundation for SwiftCart, where authorization intent is explicit in the data's organization and access rules are minimal and atomic."
+    "reasoning": "The Firestore structure for SwiftCart is designed around strict adherence to Authorization Independence, Structural Segregation, and DBAC principles, ensuring robust security rules and efficient queries. \n\n**Authorization Independence via Denormalization:**\n-   For user-owned data and its nested subcollections (e.g., `UserAddress`, `Cart`, `ShoppingList`, `Order`), the `userId` is consistently present in the root document of each logical user-specific collection (e.g., `/users/{userId}/addresses/{addressId}`). This allows security rules to directly verify `request.auth.uid == resource.data.userId` without needing `get()` operations on parent documents, thus preventing rule chain dependencies and enabling atomic write operations.\n-   Crucially, for deeper nested subcollections like `CartItem`, `OrderItem`, and `ShoppingListItem`, the `userId` (denormalized from their respective parent `Cart`, `Order`, or `ShoppingList` documents) *must* be included in each document. This means, for instance, a `CartItem` will contain `userId` in addition to `cartId`. This ensures that a security rule evaluating a `CartItem` can directly check `request.auth.uid == resource.data.userId` without performing a `get()` on the parent `Cart` document, which would otherwise violate Authorization Independence.\n\n**Support for QAPs (Queries as Authorization Predicates):**\n-   **Public Catalog:** `/products` and `/categories` are top-level collections designed for public read access. Any user can query these, and rules can easily grant read access to all authenticated (or even unauthenticated) users, enabling efficient catalog browsing and search without filters imposed by rules.\n-   **User-Specific Data:** All user-specific data (e.g., `addresses`, `carts`, `orders`, `shopping_lists`) are nested under `/users/{userId}/...`. This path structure automatically scopes queries and security checks to the authenticated user's UID (`request.auth.uid`), ensuring that users can only query and manage their own data. This satisfies QAPs by making the `userId` part of the query path.\n-   **Delivery Agent Data:** The `/delivery_agents/{agentId}` collection holds agent information and live location. Delivery agents can only update their own document (where `agentId == request.auth.uid`). Customers can read all delivery agents or filter by `deliveryAgentId` for their specific order. This setup supports QAPs as the data is directly queryable and authorization is based on document-level fields or path parameters.\n-   **Role-Based Access (DBAC):** Dedicated collections like `/roles_admin/{userId}` and `/roles_delivery_agent/{userId}` are used to store user roles. The mere existence of a document at these paths grants the corresponding role. Security rules can efficiently check for a user's role using `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` without affecting QAPs. Admins will have broad read/write access to certain collections (e.g., `/products`, `/categories`), while delivery agents will have specific write access (e.g., their own location) and read access to relevant orders. This segregation of roles into distinct collections prevents complex nested authorization logic within the data documents themselves, making rules simple, robust, and debuggable."
+  }
 }
