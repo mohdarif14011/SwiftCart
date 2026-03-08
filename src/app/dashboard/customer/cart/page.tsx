@@ -7,8 +7,9 @@ import { useAppStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ShoppingBag, Plus, Minus, ArrowLeft, MapPin, CreditCard } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, ArrowLeft, MapPin, CreditCard, User } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -17,6 +18,8 @@ export default function CustomerCart() {
   const { cart, updateCartQuantity, placeOrder } = useAppStore();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
   const [paymentType, setPaymentType] = useState('cod');
   const router = useRouter();
   const db = useFirestore();
@@ -26,8 +29,10 @@ export default function CustomerCart() {
   const { data: profile } = useDoc(userProfileRef);
 
   useEffect(() => {
-    if (profile?.address) {
-      setDeliveryAddress(profile.address);
+    if (profile) {
+      setDeliveryAddress(profile.address || '');
+      setCustomerName(`${profile.firstName || ''} ${profile.lastName || ''}`.trim());
+      setContactNumber(profile.phone || '');
     }
   }, [profile]);
 
@@ -40,6 +45,8 @@ export default function CustomerCart() {
     const newOrder = {
       id: orderId,
       userId: firebaseUser?.uid || 'anonymous',
+      customerName,
+      contactNumber,
       items: [...cart],
       total: cartTotal + deliveryFee,
       status: 'CONFIRMED' as const,
@@ -107,7 +114,37 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          {/* Delivery Address - Static display from profile */}
+          {/* Personal Details */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Personal Details</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer-name" className="text-xs font-bold text-slate-500">Name</Label>
+                <Input 
+                  id="customer-name"
+                  placeholder="Your Name" 
+                  className="bg-slate-50 border-none rounded-xl h-12 font-bold focus-visible:ring-primary"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact-number" className="text-xs font-bold text-slate-500">Contact Number</Label>
+                <Input 
+                  id="contact-number"
+                  placeholder="Your Phone Number" 
+                  className="bg-slate-50 border-none rounded-xl h-12 font-bold focus-visible:ring-primary"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Address */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -126,12 +163,17 @@ export default function CustomerCart() {
               <CreditCard className="h-4 w-4 text-primary" />
               <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Payment Type</h3>
             </div>
+            
+            <p className="text-xs font-bold text-accent bg-accent/5 p-3 rounded-xl border border-accent/20">
+              Scan and pay at the time of delivery
+            </p>
+
             <RadioGroup value={paymentType} onValueChange={setPaymentType} className="grid grid-cols-2 gap-4">
               <div>
                 <RadioGroupItem value="cod" id="cod" className="peer sr-only" />
                 <Label
                   htmlFor="cod"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all h-full"
                 >
                   <span className="text-sm font-bold">Cash on Delivery</span>
                 </Label>
@@ -140,7 +182,7 @@ export default function CustomerCart() {
                 <RadioGroupItem value="online" id="online" className="peer sr-only" />
                 <Label
                   htmlFor="online"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all h-full"
                 >
                   <span className="text-sm font-bold">Online Payment</span>
                 </Label>
@@ -169,7 +211,7 @@ export default function CustomerCart() {
             <Button 
               className="w-full h-14 rounded-2xl bg-primary font-black shadow-lg text-lg" 
               onClick={() => setIsConfirmOpen(true)}
-              disabled={!deliveryAddress.trim()}
+              disabled={!deliveryAddress.trim() || !customerName.trim() || !contactNumber.trim()}
             >
               Place Order
             </Button>
