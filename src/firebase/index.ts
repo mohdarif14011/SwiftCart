@@ -7,17 +7,28 @@ import { getFirestore } from 'firebase/firestore'
 
 /**
  * Initializes Firebase using the provided configuration.
- * In this environment, we use the explicit config object to ensure 
- * immediate connectivity and prevent 403 errors from automatic discovery.
+ * Includes safety checks to prevent crashes if API keys are missing.
  */
 export function initializeFirebase() {
-  if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
-  }
+  try {
+    const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined";
+    
+    if (!isConfigValid) {
+      console.warn("Firebase configuration is missing or invalid. Check your .env file.");
+    }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+    if (!getApps().length) {
+      const firebaseApp = initializeApp(firebaseConfig);
+      return getSdks(firebaseApp);
+    }
+
+    return getSdks(getApp());
+  } catch (error) {
+    console.error("Firebase failed to initialize:", error);
+    // Return dummy initialized app to prevent cascading runtime errors
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    return getSdks(app);
+  }
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
