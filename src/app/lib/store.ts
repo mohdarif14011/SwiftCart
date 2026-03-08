@@ -1,5 +1,6 @@
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Product, CartItem, Order, UserRole, User, OrderStatus } from '@/app/types';
 
 interface AppState {
@@ -38,42 +39,56 @@ const INITIAL_PRODUCTS: Product[] = [
   { id: '15', name: 'Stainless Steel Whisk', category: 'Kitchen Essentials', price: 7.50, inventory: 20, imageUrl: 'https://picsum.photos/seed/kitchen3/300/300', description: 'High-quality whisk for baking and cooking.' },
 ];
 
-export const useAppStore = create<AppState>((set) => ({
-  user: null,
-  products: INITIAL_PRODUCTS,
-  cart: [],
-  orders: [],
-  favorites: [],
-  setUser: (user) => set({ user }),
-  setProducts: (products) => set({ products }),
-  addToCart: (product) => set((state) => {
-    const existing = state.cart.find(i => i.productId === product.id);
-    if (existing) {
-      return {
-        cart: state.cart.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i)
-      };
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      user: null,
+      products: INITIAL_PRODUCTS,
+      cart: [],
+      orders: [],
+      favorites: [],
+      setUser: (user) => set({ user }),
+      setProducts: (products) => set({ products }),
+      addToCart: (product) => set((state) => {
+        const existing = state.cart.find(i => i.productId === product.id);
+        if (existing) {
+          return {
+            cart: state.cart.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i)
+          };
+        }
+        return {
+          cart: [...state.cart, { productId: product.id, name: product.name, price: product.price, quantity: 1, imageUrl: product.imageUrl }]
+        };
+      }),
+      removeFromCart: (productId) => set((state) => ({
+        cart: state.cart.filter(i => i.productId !== productId)
+      })),
+      updateCartQuantity: (productId, quantity) => set((state) => ({
+        cart: state.cart.map(i => i.productId === productId ? { ...i, quantity: Math.max(0, quantity) } : i).filter(i => i.quantity > 0)
+      })),
+      clearCart: () => set({ cart: [] }),
+      placeOrder: (order) => set((state) => ({
+        orders: [order, ...state.orders],
+        cart: []
+      })),
+      updateOrderStatus: (orderId, status) => set((state) => ({
+        orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o)
+      })),
+      toggleFavorite: (productId) => set((state) => ({
+        favorites: state.favorites.includes(productId)
+          ? state.favorites.filter(id => id !== productId)
+          : [...state.favorites, productId]
+      })),
+    }),
+    {
+      name: 'swiftcart-storage',
+      storage: createJSONStorage(() => localStorage),
+      // Only persist cart, favorites, and orders. User state is often better handled by auth providers.
+      partialize: (state) => ({ 
+        cart: state.cart, 
+        favorites: state.favorites, 
+        orders: state.orders 
+      }),
     }
-    return {
-      cart: [...state.cart, { productId: product.id, name: product.name, price: product.price, quantity: 1, imageUrl: product.imageUrl }]
-    };
-  }),
-  removeFromCart: (productId) => set((state) => ({
-    cart: state.cart.filter(i => i.productId !== productId)
-  })),
-  updateCartQuantity: (productId, quantity) => set((state) => ({
-    cart: state.cart.map(i => i.productId === productId ? { ...i, quantity: Math.max(0, quantity) } : i).filter(i => i.quantity > 0)
-  })),
-  clearCart: () => set({ cart: [] }),
-  placeOrder: (order) => set((state) => ({
-    orders: [order, ...state.orders],
-    cart: []
-  })),
-  updateOrderStatus: (orderId, status) => set((state) => ({
-    orders: state.orders.map(o => o.id === orderId ? { ...o, status } : o)
-  })),
-  toggleFavorite: (productId) => set((state) => ({
-    favorites: state.favorites.includes(productId)
-      ? state.favorites.filter(id => id !== productId)
-      : [...state.favorites, productId]
-  })),
-}));
+  )
+);
