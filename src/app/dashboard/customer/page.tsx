@@ -112,6 +112,7 @@ export default function CustomerDashboard() {
     setIsClient(true);
   }, []);
 
+  // Sync Firebase User to Store
   useEffect(() => {
     if (firebaseUser && !user) {
       setUser({
@@ -122,6 +123,13 @@ export default function CustomerDashboard() {
       });
     }
   }, [firebaseUser, user, setUser]);
+
+  // Handle Redirection of unauthenticated users in an Effect to avoid render-time updates
+  useEffect(() => {
+    if (!isUserLoading && !firebaseUser) {
+      router.replace('/auth/customer');
+    }
+  }, [isUserLoading, firebaseUser, router]);
 
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
@@ -280,10 +288,8 @@ export default function CustomerDashboard() {
     );
   }
 
-  if (!firebaseUser && !isUserLoading) {
-    router.replace('/auth/customer');
-    return null;
-  }
+  // Final check to prevent rendering dashboard if not logged in
+  if (!firebaseUser) return null;
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
