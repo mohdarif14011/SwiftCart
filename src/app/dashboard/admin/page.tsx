@@ -18,7 +18,10 @@ import {
   Users,
   Truck,
   UserPlus,
-  Loader2
+  Loader2,
+  Mail,
+  Lock,
+  Phone
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -26,6 +29,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { firebaseConfig } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
@@ -41,7 +47,13 @@ export default function AdminDashboard() {
   const [prodForm, setProdForm] = useState({ name: '', category: '', price: '', inventory: '10' });
   
   // Form states for adding agent
-  const [agentForm, setAgentForm] = useState({ uid: '', firstName: '', lastName: '' });
+  const [agentForm, setAgentForm] = useState({ 
+    email: '', 
+    password: '', 
+    firstName: '', 
+    lastName: '', 
+    phone: '' 
+  });
 
   // Real-time collections for user management
   const customersQuery = useMemoFirebase(() => collection(db, 'customers'), [db]);
@@ -55,8 +67,6 @@ export default function AdminDashboard() {
   );
 
   const handleDeleteProduct = (id: string) => {
-    // For MVP, we manage local state for products as they are defined in INITIAL_PRODUCTS
-    // In a full implementation, this would also call deleteDocumentNonBlocking(doc(db, 'products', id))
     setProducts(products.filter(p => p.id !== id));
     toast({ title: "Product Removed", description: "The item has been removed from the catalog." });
   };
@@ -84,41 +94,68 @@ export default function AdminDashboard() {
     };
 
     setProducts([...products, newProduct]);
-    // Optional: persist to Firestore products collection if you want global sync
-    // setDocumentNonBlocking(doc(db, 'products', newProduct.id), newProduct, { merge: true });
-
     toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
     setProdForm({ name: '', category: '', price: '', inventory: '10' });
     setIsAddingProduct(false);
   };
 
-  const handleAddAgent = () => {
-    if (!agentForm.uid || !agentForm.firstName || !agentForm.lastName) {
-      toast({ variant: "destructive", title: "Error", description: "All fields are required." });
+  const handleAddAgent = async () => {
+    if (!agentForm.email || !agentForm.password || !agentForm.firstName || !agentForm.lastName) {
+      toast({ variant: "destructive", title: "Error", description: "Email, Password, and Name are required." });
       return;
     }
 
     setIsAddingAgent(true);
     
-    // 1. Grant the Security Role
-    setDocumentNonBlocking(doc(db, 'roles_delivery_agent', agentForm.uid), {
-      assignedAt: new Date().toISOString(),
-      active: true
-    }, { merge: true });
+    let secondaryApp;
+    try {
+      // 1. Create a temporary secondary Firebase app instance to register the user
+      // This avoids signing out the current Admin user
+      secondaryApp = initializeApp(firebaseConfig, 'SecondaryOnboarding');
+      const secondaryAuth = getAuth(secondaryApp);
+      
+      // 2. Create the Auth Account
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, agentForm.email, agentForm.password);
+      const uid = userCredential.user.uid;
+      
+      // 3. Clean up secondary app immediately
+      await signOut(secondaryAuth);
+      await deleteApp(secondaryApp);
 
-    // 2. Create the Delivery Agent Profile
-    setDocumentNonBlocking(doc(db, 'deliveryAgents', agentForm.uid), {
-      id: agentForm.uid,
-      firstName: agentForm.firstName,
-      lastName: agentForm.lastName,
-      status: 'Available',
-      vehicleType: 'E-Bike',
-      joinedAt: new Date().toISOString()
-    }, { merge: true });
+      // 4. Use main Firestore instance to grant the Security Role
+      setDocumentNonBlocking(doc(db, 'roles_delivery_agent', uid), {
+        assignedAt: new Date().toISOString(),
+        active: true
+      }, { merge: true });
 
-    toast({ title: "Agent Onboarded", description: `${agentForm.firstName} now has delivery access.` });
-    setAgentForm({ uid: '', firstName: '', lastName: '' });
-    setIsAddingAgent(false);
+      // 5. Create the Delivery Agent Profile
+      setDocumentNonBlocking(doc(db, 'deliveryAgents', uid), {
+        id: uid,
+        firstName: agentForm.firstName,
+        lastName: agentForm.lastName,
+        email: agentForm.email,
+        phone: agentForm.phone,
+        status: 'Available',
+        vehicleType: 'E-Bike',
+        joinedAt: new Date().toISOString()
+      }, { merge: true });
+
+      toast({ title: "Agent Onboarded", description: `${agentForm.firstName} has been created and granted fleet access.` });
+      setAgentForm({ email: '', password: '', firstName: '', lastName: '', phone: '' });
+    } catch (error: any) {
+      console.error(error);
+      toast({ 
+        variant: "destructive", 
+        title: "Onboarding Failed", 
+        description: error.message || "Could not create agent account."
+      });
+      // Ensure cleanup if creation fails
+      if (secondaryApp) {
+        try { await deleteApp(secondaryApp); } catch(e) {}
+      }
+    } finally {
+      setIsAddingAgent(false);
+    }
   };
 
   const handleLogout = () => {
@@ -325,29 +362,20 @@ export default function AdminDashboard() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xl font-bold">Active Fleet</CardTitle>
-                    <CardDescription>Manage your delivery agents. Only you (the Admin) can grant or revoke access.</CardDescription>
+                    <CardDescription>Manage your delivery agents. Only you (the Admin) can create new agent accounts.</CardDescription>
                   </div>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="default" className="gap-2 bg-accent hover:bg-accent/90">
-                        <UserPlus className="h-4 w-4" /> Onboard Agent
+                        <UserPlus className="h-4 w-4" /> Create Agent Account
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[500px]">
                       <DialogHeader>
-                        <DialogTitle>Onboard New Delivery Agent</DialogTitle>
-                        <CardDescription>Assign agent roles by their authentication UID. Multiple agents can be added to the fleet.</CardDescription>
+                        <DialogTitle>Add New Delivery Agent</DialogTitle>
+                        <CardDescription>Enter the agent's details. An authentication account and profile will be created.</CardDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-uid">User UID (from Firebase Auth)</Label>
-                          <Input 
-                            id="agent-uid" 
-                            placeholder="e.g. gHZ9n7s2b9..." 
-                            value={agentForm.uid}
-                            onChange={(e) => setAgentForm({...agentForm, uid: e.target.value})}
-                          />
-                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="agent-first">First Name</Label>
@@ -362,20 +390,70 @@ export default function AdminDashboard() {
                             <Label htmlFor="agent-last">Last Name</Label>
                             <Input 
                               id="agent-last" 
-                              placeholder="Agent" 
+                              placeholder="Smith" 
                               value={agentForm.lastName}
                               onChange={(e) => setAgentForm({...agentForm, lastName: e.target.value})}
                             />
                           </div>
                         </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="agent-email">Email Address</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              id="agent-email" 
+                              type="email"
+                              className="pl-10"
+                              placeholder="john.smith@swiftcart.com" 
+                              value={agentForm.email}
+                              onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="agent-phone">Phone Number</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                id="agent-phone" 
+                                className="pl-10"
+                                placeholder="+91 98765 43210" 
+                                value={agentForm.phone}
+                                onChange={(e) => setAgentForm({...agentForm, phone: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="agent-pass">Password</Label>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                id="agent-pass" 
+                                type="password"
+                                className="pl-10"
+                                placeholder="••••••••" 
+                                value={agentForm.password}
+                                onChange={(e) => setAgentForm({...agentForm, password: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <DialogFooter>
                         <Button 
-                          className="w-full" 
+                          className="w-full h-12 text-base font-bold" 
                           onClick={handleAddAgent}
                           disabled={isAddingAgent}
                         >
-                          {isAddingAgent ? <Loader2 className="animate-spin" /> : "Grant Delivery Privileges"}
+                          {isAddingAgent ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Creating Account...
+                            </>
+                          ) : (
+                            "Create & Grant Access"
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -387,6 +465,7 @@ export default function AdminDashboard() {
                       <TableHeader className="bg-muted/50">
                         <TableRow>
                           <TableHead>Agent</TableHead>
+                          <TableHead>Contact</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Joined</TableHead>
                           <TableHead className="text-right">Action</TableHead>
@@ -397,7 +476,11 @@ export default function AdminDashboard() {
                           <TableRow key={agent.id}>
                             <TableCell>
                               <div className="font-medium">{agent.firstName} {agent.lastName}</div>
-                              <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType} • UID: {agent.id.slice(0, 8)}...</div>
+                              <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType || 'E-Bike'}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs font-medium">{agent.email}</div>
+                              <div className="text-[10px] text-muted-foreground">{agent.phone || 'No Phone'}</div>
                             </TableCell>
                             <TableCell>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -423,7 +506,7 @@ export default function AdminDashboard() {
                         ))}
                         {(!agents || agents.length === 0) && (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                               No delivery agents in the fleet yet.
                             </TableCell>
                           </TableRow>

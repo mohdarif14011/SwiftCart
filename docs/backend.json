@@ -123,12 +123,26 @@
         "lastName": {
           "type": "string"
         },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        },
         "status": {
           "type": "string",
           "enum": ["Available", "On Delivery", "Offline"]
+        },
+        "vehicleType": {
+          "type": "string"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
-      "required": ["id", "firstName", "lastName", "status"]
+      "required": ["id", "firstName", "lastName", "email", "status"]
     }
   },
   "auth": {

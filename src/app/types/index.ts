@@ -18,6 +18,17 @@ export interface Product {
   description: string;
 }
 
+export interface DeliveryAgent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  status: 'Available' | 'On Delivery' | 'Offline';
+  vehicleType?: string;
+  joinedAt?: string;
+}
+
 export interface CartItem {
   productId: string;
   name: string;
