@@ -4,7 +4,7 @@
 import { ReactNode, useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
-import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search } from 'lucide-react';
+import { ShoppingCart, LayoutGrid, Heart, Home as HomeIcon, Package, User as UserIcon, LogOut, MapPin, ChevronDown, Search, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { useAuth, useFirestore, useDoc, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
+import Link from 'next/navigation';
 
 export default function CustomerLayout({ children }: { children: ReactNode }) {
-  const { cart, user, setUser, searchQuery, setSearchQuery } = useAppStore();
+  const { cart, setUser, searchQuery, setSearchQuery } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const auth = useAuth();
@@ -28,14 +28,24 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
+  // Unified redirection logic
   useEffect(() => {
-    if (!isClient || isUserLoading) return;
+    if (!isClient || isUserLoading || isProfileLoading) return;
+
     if (!firebaseUser) {
       router.replace('/auth/customer');
       return;
     }
-    if (!isProfileLoading && !profile && pathname !== '/dashboard/customer/onboarding') {
+
+    const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
+
+    // If no profile exists and user isn't on onboarding, send them there
+    if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
+    } 
+    // If profile exists and user IS on onboarding, send them to shop
+    else if (profile && isOnOnboarding) {
+      router.replace('/dashboard/customer');
     }
   }, [isClient, firebaseUser, isUserLoading, profile, isProfileLoading, pathname, router]);
 
@@ -54,6 +64,15 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   ];
 
   if (!isClient) return null;
+
+  // Show a clean loading state while checking profile/auth to prevent layout shifts
+  if (isUserLoading || (isProfileLoading && pathname !== '/dashboard/customer/onboarding')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Onboarding page has its own layout/header
   if (pathname === '/dashboard/customer/onboarding') {
@@ -103,11 +122,13 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        {children}
+      </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-1", pathname === item.href ? 'text-primary' : 'text-slate-400')}>
+          <div key={item.href} onClick={() => router.push(item.href)} className={cn("flex flex-col items-center gap-1 cursor-pointer", pathname === item.href ? 'text-primary' : 'text-slate-400')}>
             <div className="relative">
               <item.icon className={cn("h-6 w-6", pathname === item.href && item.name === 'Favorites' && 'fill-primary')} />
               {item.badge && item.badge > 0 && (
@@ -115,7 +136,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
               )}
             </div>
             <span className="text-[10px] font-bold">{item.name}</span>
-          </Link>
+          </div>
         ))}
       </nav>
     </div>
