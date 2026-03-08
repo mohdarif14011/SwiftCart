@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, Search, Heart, Plus, Minus, ArrowLeft, Clock, Loader2
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, Search, Heart, Plus, Minus, ArrowLeft, Clock, Loader2, Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -136,11 +136,15 @@ function ProductItem({ product }: { product: any }) {
   return (
     <div className="flex flex-col w-full group">
       <div className="relative aspect-square bg-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-3 mb-2 border border-slate-100/50 shadow-sm">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
-        />
+        {product.imageUrl ? (
+          <img 
+            src={product.imageUrl} 
+            alt={product.name} 
+            className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
+          />
+        ) : (
+          <Package className="h-10 w-10 text-slate-100" />
+        )}
         <button 
           onClick={() => toggleFavorite(product.id)} 
           className={cn("absolute top-3 right-3 transition-colors z-10 p-1.5 rounded-full bg-slate-50/80 backdrop-blur-sm", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}

@@ -68,7 +68,7 @@ export default function AdminProducts() {
       name: product.name,
       category: product.category,
       price: product.price.toString(),
-      imageUrl: product.imageUrl,
+      imageUrl: product.imageUrl || '',
       weight: product.weight?.toString() || '',
       unit: product.unit || 'g',
       isInStock: (product.inventory || 0) > 0,
@@ -107,7 +107,7 @@ export default function AdminProducts() {
       category: prodForm.category,
       price: parseFloat(prodForm.price),
       inventory: prodForm.isInStock ? 99 : 0,
-      imageUrl: prodForm.imageUrl || `https://picsum.photos/seed/${prodForm.name}/300/300`,
+      imageUrl: prodForm.imageUrl || '',
       description: `Freshly stocked ${prodForm.name}`,
       weight: prodForm.weight ? parseFloat(prodForm.weight) : undefined,
       unit: prodForm.unit,
@@ -173,8 +173,12 @@ export default function AdminProducts() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                            <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                          <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+                            {product.imageUrl ? (
+                              <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                            ) : (
+                              <Package className="h-5 w-5 text-muted-foreground" />
+                            )}
                           </div>
                           {product.name}
                         </div>
@@ -270,10 +274,10 @@ export default function AdminProducts() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="imageUrl">Product Image URL</Label>
+              <Label htmlFor="imageUrl">Product Image URL (Cloudinary)</Label>
               <div className="relative">
                 <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="imageUrl" className="pl-10" placeholder="https://images.unsplash.com/..." value={prodForm.imageUrl} onChange={(e) => setProdForm({...prodForm, imageUrl: e.target.value})} />
+                <Input id="imageUrl" className="pl-10" placeholder="https://res.cloudinary.com/..." value={prodForm.imageUrl} onChange={(e) => setProdForm({...prodForm, imageUrl: e.target.value})} />
               </div>
             </div>
             <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg">

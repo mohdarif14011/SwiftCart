@@ -4,7 +4,7 @@
 import Image from 'next/image';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { Plus, ShoppingCart, Package } from 'lucide-react';
 import { Product } from '@/app/types';
 import { useAppStore } from '@/app/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -27,14 +27,18 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="overflow-hidden group hover:shadow-md transition-all duration-300 border-none bg-white">
-      <div className="relative aspect-square overflow-hidden">
-        <Image
-          src={product.imageUrl}
-          alt={product.name}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          data-ai-hint="grocery product"
-        />
+      <div className="relative aspect-square overflow-hidden flex items-center justify-center bg-slate-50">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            data-ai-hint="grocery product"
+          />
+        ) : (
+          <Package className="h-12 w-12 text-slate-200" />
+        )}
         <div className="absolute top-2 right-2">
           <span className="bg-white/90 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-full shadow-sm">
             {product.category}

@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
-import { Star, Heart, Plus, Minus, ArrowLeft, Search, Clock } from 'lucide-react';
+import { Star, Heart, Plus, Minus, ArrowLeft, Search, Clock, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function CustomerFavorites() {
@@ -72,11 +72,15 @@ function ProductCard({ product }: { product: any }) {
     <div className="flex flex-col w-full group">
       {/* Image Container */}
       <div className="relative aspect-square bg-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50 shadow-sm">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
-        />
+        {product.imageUrl ? (
+          <img 
+            src={product.imageUrl} 
+            alt={product.name} 
+            className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
+          />
+        ) : (
+          <Package className="h-12 w-12 text-slate-100" />
+        )}
         <button 
           onClick={() => toggleFavorite(product.id)} 
           className={cn("absolute top-3 right-3 transition-colors z-10 p-1.5 rounded-full bg-slate-50/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}

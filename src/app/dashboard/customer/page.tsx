@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, Clock, Loader2
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, Clock, Loader2, Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -117,11 +117,15 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
   return (
     <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[145px] max-w-[145px]' : 'w-full')}>
       <div className="relative aspect-square bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-3 mb-2 border border-slate-100/50">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
-        />
+        {product.imageUrl ? (
+          <img 
+            src={product.imageUrl} 
+            alt={product.name} 
+            className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
+          />
+        ) : (
+          <Package className="h-10 w-10 text-slate-200" />
+        )}
         <button 
           onClick={() => toggleFavorite(product.id)} 
           className={cn("absolute top-3 right-3 transition-colors z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-400 hover:text-red-400')}
