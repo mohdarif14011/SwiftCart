@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAppStore } from '@/app/lib/store';
@@ -18,8 +18,16 @@ export default function CustomerAuthPage() {
   const router = useRouter();
   const auth = useAuth();
   const db = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
   const setUser = useAppStore((state) => state.setUser);
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!isUserLoading && firebaseUser) {
+      router.replace('/dashboard/customer');
+    }
+  }, [firebaseUser, isUserLoading, router]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -36,16 +44,11 @@ export default function CustomerAuthPage() {
         role: 'CUSTOMER',
       });
       
-      // Check if profile exists to determine if onboarding is needed
-      const docRef = doc(db, 'customers', user.uid);
-      const docSnap = await getDoc(docRef);
-      
       toast({ 
         title: "Welcome to SwiftCart!", 
         description: `Signed in as ${user.displayName || user.email}` 
       });
       
-      // Dashboard will handle the onboarding view
       router.push('/dashboard/customer');
     } catch (error: any) {
       console.error(error);
@@ -58,6 +61,14 @@ export default function CustomerAuthPage() {
       setLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">

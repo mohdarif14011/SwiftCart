@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Truck, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAppStore } from '@/app/lib/store';
@@ -20,8 +20,17 @@ export default function DeliveryAuthPage() {
   const router = useRouter();
   const auth = useAuth();
   const db = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
   const setUser = useAppStore((state) => state.setUser);
+  const user = useAppStore((state) => state.user);
   const { toast } = useToast();
+
+  // Redirect if already logged in as DELIVERY_AGENT
+  useEffect(() => {
+    if (!isUserLoading && firebaseUser && user?.role === 'DELIVERY_AGENT') {
+      router.replace('/dashboard/delivery');
+    }
+  }, [firebaseUser, isUserLoading, user, router]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,6 +67,14 @@ export default function DeliveryAuthPage() {
       setLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
