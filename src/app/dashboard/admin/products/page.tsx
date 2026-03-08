@@ -29,7 +29,7 @@ const CATEGORIES = [
 
 export default function AdminProducts() {
   const db = useFirestore();
-  productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
+  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
   const { data: products, isLoading } = useCollection<Product>(productsQuery);
   
   const [productSearch, setProductSearch] = useState('');
@@ -102,7 +102,6 @@ export default function AdminProducts() {
     
     const productId = editingProduct?.id || Math.random().toString(36).substr(2, 9);
     
-    // Construct base product data
     const productData: any = {
       id: productId,
       name: prodForm.name,
@@ -114,7 +113,6 @@ export default function AdminProducts() {
       unit: prodForm.unit,
     };
 
-    // Only add optional numeric fields if they have a value to avoid 'undefined' errors in Firestore
     if (prodForm.weight !== '' && !isNaN(parseFloat(prodForm.weight))) {
       productData.weight = parseFloat(prodForm.weight);
     }
