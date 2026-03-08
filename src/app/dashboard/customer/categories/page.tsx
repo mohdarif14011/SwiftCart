@@ -37,7 +37,6 @@ export default function CustomerCategories() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] bg-white overflow-hidden">
-      {/* Header with Back Button and Title */}
       <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100 shrink-0">
         <Button 
           variant="ghost" 
@@ -51,7 +50,6 @@ export default function CustomerCategories() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar: Categories (Reduced size) */}
         <aside className="w-20 sm:w-24 flex-shrink-0 border-r border-slate-100 bg-slate-50 overflow-y-auto no-scrollbar">
           {CATEGORIES.map((cat) => (
             <button 
@@ -83,7 +81,6 @@ export default function CustomerCategories() {
           ))}
         </aside>
 
-        {/* Main Content: Search + Products */}
         <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/30">
           <div className="p-4 border-b border-slate-100 bg-white shrink-0">
             <div className="flex flex-col gap-3">
@@ -171,7 +168,7 @@ function ProductItem({ product }: { product: any }) {
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-black text-slate-900">${product.price.toFixed(2)}</span>
+          <span className="text-xs font-black text-slate-900">₹{product.price.toFixed(2)}</span>
           {product.offerPercentage && (
             <span className="text-[8px] font-black text-green-600 bg-green-50 px-1 rounded">{product.offerPercentage}% OFF</span>
           )}

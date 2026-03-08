@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -22,7 +23,6 @@ export default function CustomerFavorites() {
 
   return (
     <div className="p-4 bg-slate-50 min-h-screen space-y-6">
-      {/* Header with Title and Back Button */}
       <div className="flex items-center gap-4">
         <Button 
           variant="ghost" 
@@ -35,7 +35,6 @@ export default function CustomerFavorites() {
         <h2 className="text-2xl font-black text-slate-900">My Favorites</h2>
       </div>
 
-      {/* Local Search Bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <Input 
@@ -46,7 +45,6 @@ export default function CustomerFavorites() {
         />
       </div>
 
-      {/* Favorites List */}
       {filteredFavorites.length === 0 ? (
         <div className="py-20 flex flex-col items-center justify-center text-center opacity-40">
            <Heart className="h-12 w-12 mb-4 text-slate-300" />
@@ -113,7 +111,7 @@ function ProductCard({ product }: { product: any }) {
           ))}
         </div>
         <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-sm font-black text-slate-900">${product.price.toFixed(2)}</span>
+          <span className="text-sm font-black text-slate-900">₹{product.price.toFixed(2)}</span>
           {product.offerPercentage && (
             <span className="text-[10px] font-black text-green-600 ml-auto">{product.offerPercentage}% OFF</span>
           )}

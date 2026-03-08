@@ -176,7 +176,7 @@ export default function AdminProducts() {
                     <TableCell className="text-xs">
                       {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
                     </TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell>₹{product.price.toFixed(2)}</TableCell>
                     <TableCell>
                       {product.offerPercentage ? (
                         <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
@@ -226,8 +226,8 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="price">Price ($)</Label>
-                <Input id="price" type="number" step="0.01" placeholder="4.99" value={prodForm.price} onChange={(e) => setProdForm({...prodForm, price: e.target.value})} />
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input id="price" type="number" step="0.01" placeholder="99.00" value={prodForm.price} onChange={(e) => setProdForm({...prodForm, price: e.target.value})} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="offer">Offer Percentage (%)</Label>

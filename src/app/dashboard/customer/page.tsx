@@ -113,7 +113,7 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
           <div className="flex items-center">{[1, 2, 3, 4, 5].map((s) => (<Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />))}</div>
         </div>
         <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-sm font-black text-slate-900">${product.price.toFixed(2)}</span>
+          <span className="text-sm font-black text-slate-900">₹{product.price.toFixed(2)}</span>
           {product.offerPercentage && (
             <span className="text-[10px] font-black text-green-600 ml-auto">{product.offerPercentage}% OFF</span>
           )}

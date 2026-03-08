@@ -30,13 +30,12 @@ export default function CustomerCart() {
     if (profile) {
       setDeliveryAddress(profile.address || '');
       setCustomerName(`${profile.firstName || ''} ${profile.lastName || ''}`.trim());
-      // The contact number now defaults to the one saved in profile (onboarding)
       setContactNumber(profile.phone || '');
     }
   }, [profile]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = cart.length > 0 ? 2.00 : 0;
+  const deliveryFee = cart.length > 0 ? 20.00 : 0;
 
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
@@ -86,7 +85,6 @@ export default function CustomerCart() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Cart Items */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
             <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Order Items</h3>
             <div className="space-y-4">
@@ -97,7 +95,7 @@ export default function CustomerCart() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900 truncate">{item.name}</p>
-                    <p className="text-xs text-slate-500 font-bold">${item.price.toFixed(2)} / unit</p>
+                    <p className="text-xs text-slate-500 font-bold">₹{item.price.toFixed(2)} / unit</p>
                   </div>
                   <div className="flex items-center bg-slate-100 rounded-lg overflow-hidden shrink-0">
                     <button onClick={() => updateCartQuantity(item.productId, item.quantity - 1)} className="p-1 hover:bg-slate-200 transition-colors">
@@ -113,7 +111,6 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          {/* Personal Details */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
@@ -143,7 +140,6 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          {/* Delivery Address */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -156,34 +152,31 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          {/* Payment Type */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
               <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Payment Type</h3>
             </div>
-            
             <p className="text-sm font-bold text-accent bg-accent/5 p-4 rounded-xl border border-accent/20 flex items-center gap-3">
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               Scan and pay at the time of delivery
             </p>
           </div>
           
-          {/* Summary and Action */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500 font-medium">Subtotal</span>
-                <span className="font-bold">${cartTotal.toFixed(2)}</span>
+                <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500 font-medium">Delivery Fee</span>
-                <span className="font-bold">${deliveryFee.toFixed(2)}</span>
+                <span className="font-bold">₹{deliveryFee.toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-xl font-black pt-2">
                 <span>Total</span>
-                <span>${(cartTotal + deliveryFee).toFixed(2)}</span>
+                <span>₹{(cartTotal + deliveryFee).toFixed(2)}</span>
               </div>
             </div>
             

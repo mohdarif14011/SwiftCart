@@ -79,7 +79,7 @@ export default function CustomerOrders() {
                 {o.items.slice(0, 2).map((item, idx) => (
                   <div key={idx} className="flex justify-between text-xs font-bold text-slate-600">
                     <span>{item.name} x{item.quantity}</span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
                 {o.items.length > 2 && (
@@ -93,7 +93,7 @@ export default function CustomerOrders() {
                 <div className="flex items-center gap-1 text-[10px] font-black text-slate-400">
                   <Clock className="h-3 w-3" /> Est. Arrival: 12 mins
                 </div>
-                <span className="font-black text-slate-900">${o.total.toFixed(2)}</span>
+                <span className="font-black text-slate-900">₹{o.total.toFixed(2)}</span>
               </div>
             </div>
           ))}

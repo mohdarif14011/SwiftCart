@@ -2,8 +2,8 @@
 'use client';
 
 import { useAppStore } from '@/app/lib/store';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Package, DollarSign, ClipboardList, Truck, TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Package, DollarSign, ClipboardList, Truck, TrendingUp, Clock } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
@@ -51,7 +51,7 @@ export default function AdminOverview() {
           <CardHeader className="pb-2">
             <CardDescription className="text-xs uppercase tracking-wider font-bold">Revenue Today</CardDescription>
             <CardTitle className="text-3xl font-bold flex items-center justify-between">
-              ${totalRevenue.toFixed(2)}
+              ₹{totalRevenue.toFixed(2)}
               <DollarSign className="h-6 w-6 text-green-500 opacity-20" />
             </CardTitle>
           </CardHeader>
@@ -95,7 +95,7 @@ export default function AdminOverview() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold">New order ORD-{order.id}</p>
-                  <p className="text-xs text-muted-foreground">${order.total?.toFixed(2)} • {order.address}</p>
+                  <p className="text-xs text-muted-foreground">₹{order.total?.toFixed(2)} • {order.address}</p>
                 </div>
                 <span className="text-[10px] font-black text-slate-400">JUST NOW</span>
               </div>

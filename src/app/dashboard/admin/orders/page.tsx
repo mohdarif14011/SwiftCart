@@ -87,7 +87,7 @@ export default function AdminOrders() {
                   <TableCell className="text-xs text-muted-foreground">
                     {new Date(order.createdAt).toLocaleTimeString()}
                   </TableCell>
-                  <TableCell className="font-bold text-primary">${order.total.toFixed(2)}</TableCell>
+                  <TableCell className="font-bold text-primary">₹{order.total.toFixed(2)}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs">{order.address}</TableCell>
                   <TableCell>
                     <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
