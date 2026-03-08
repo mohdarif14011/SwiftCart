@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -15,17 +15,36 @@ import {
   Package,
   Clock,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  Loader2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { OrderStatus } from '@/app/types';
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 
 export default function DeliveryDashboard() {
-  const { orders, updateOrderStatus, setUser } = useAppStore();
+  const { setUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const db = useFirestore();
+  const { user: firebaseUser } = useUser();
+
+  // Real-time Orders from Firestore
+  const ordersQuery = useMemoFirebase(() => {
+    if (!firebaseUser?.uid) return null;
+    return collection(db, 'orders');
+  }, [db, firebaseUser?.uid]);
+
+  const { data: allOrders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
+
+  // Filter orders for this agent
+  const myOrders = useMemo(() => {
+    if (!allOrders || !firebaseUser?.uid) return [];
+    return allOrders.filter(o => o.agentId === firebaseUser.uid);
+  }, [allOrders, firebaseUser?.uid]);
 
   // Simulated live location coordinates
   const [agentPos, setAgentPos] = useState({ lat: 25.5808, lng: 84.8327 });
@@ -49,7 +68,10 @@ export default function DeliveryDashboard() {
     else if (currentStatus === 'PICKED_UP') nextStatus = 'OUT_FOR_DELIVERY';
     else if (currentStatus === 'OUT_FOR_DELIVERY') nextStatus = 'DELIVERED';
     
-    updateOrderStatus(orderId, nextStatus);
+    updateDocumentNonBlocking(doc(db, 'orders', orderId), {
+      status: nextStatus,
+      updatedAt: new Date().toISOString()
+    });
   };
 
   const handleLogout = () => {
@@ -57,8 +79,14 @@ export default function DeliveryDashboard() {
     router.push('/');
   };
 
-  const assignedOrders = orders.filter(o => o.status !== 'DELIVERED');
-  const historyOrders = orders.filter(o => o.status === 'DELIVERED');
+  const assignedOrders = myOrders.filter(o => o.status !== 'DELIVERED');
+  const historyOrders = myOrders.filter(o => o.status === 'DELIVERED');
+
+  const todayEarnings = useMemo(() => {
+    return historyOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  }, [historyOrders]);
+
+  if (!isClient) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -72,7 +100,7 @@ export default function DeliveryDashboard() {
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-xs font-bold text-accent uppercase tracking-wider">Online</span>
-            <span className="text-[10px] text-muted-foreground">ID: AG-4892</span>
+            <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{firebaseUser?.email}</span>
           </div>
           <Button variant="ghost" size="icon" onClick={handleLogout}>
             <LogOut className="h-5 w-5 text-muted-foreground" />
@@ -104,7 +132,6 @@ export default function DeliveryDashboard() {
               />
               <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
               
-              {/* Overlay Marker Simulation */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div 
                   className="w-10 h-10 bg-primary rounded-full border-4 border-white shadow-2xl flex items-center justify-center animate-bounce"
@@ -147,15 +174,19 @@ export default function DeliveryDashboard() {
             </div>
 
             <div className="space-y-4">
-              {activeTab === 'assigned' ? (
+              {isOrdersLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : activeTab === 'assigned' ? (
                 assignedOrders.length > 0 ? (
                   assignedOrders.map(order => (
                     <Card key={order.id} className="border-none shadow-sm hover:ring-1 ring-primary/20 transition-all">
                       <CardHeader className="pb-3">
                         <div className="flex justify-between items-start">
                           <div>
-                            <CardTitle className="text-lg">ORD-{order.id}</CardTitle>
-                            <CardDescription className="flex items-center gap-1">
+                            <CardTitle className="text-lg font-bold">ORD-{order.id}</CardTitle>
+                            <CardDescription className="flex items-center gap-1 font-medium">
                               <MapPin className="h-3 w-3" /> {order.address}
                             </CardDescription>
                           </div>
@@ -170,29 +201,31 @@ export default function DeliveryDashboard() {
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-4">
                             <div className="flex -space-x-2">
-                              {order.items.slice(0, 3).map((item, idx) => (
+                              {order.items?.slice(0, 3).map((item: any, idx: number) => (
                                 <div key={idx} className="h-8 w-8 rounded-full border-2 border-white bg-muted overflow-hidden">
                                   <img src={item.imageUrl} alt="" className="object-cover w-full h-full" />
                                 </div>
                               ))}
-                              {order.items.length > 3 && (
+                              {order.items?.length > 3 && (
                                 <div className="h-8 w-8 rounded-full border-2 border-white bg-primary/10 flex items-center justify-center text-[10px] font-bold">
                                   +{order.items.length - 3}
                                 </div>
                               )}
                             </div>
-                            <p className="text-muted-foreground">{order.items.length} items • ₹{order.total.toFixed(2)}</p>
+                            <p className="text-muted-foreground font-medium">{order.items?.length || 0} items • ₹{order.total?.toFixed(2)}</p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full text-primary border-primary">
-                              <Phone className="h-4 w-4" />
-                            </Button>
+                            {order.contactNumber && (
+                              <Button variant="outline" size="icon" asChild className="h-8 w-8 rounded-full text-primary border-primary">
+                                <a href={`tel:${order.contactNumber}`}><Phone className="h-4 w-4" /></a>
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter className="pt-0 flex gap-2">
                         <Button 
-                          className="flex-1 bg-primary"
+                          className="flex-1 bg-primary font-bold"
                           onClick={() => handleStatusUpdate(order.id, order.status)}
                         >
                           {order.status === 'CONFIRMED' ? 'Start Preparation' : 
@@ -206,23 +239,22 @@ export default function DeliveryDashboard() {
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border-dashed border-2">
                     <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No active assignments</p>
-                    <Button variant="link" className="text-primary">Request New Batch</Button>
+                    <p className="text-muted-foreground font-medium">No active assignments</p>
                   </div>
                 )
               ) : (
                 historyOrders.map(order => (
-                  <div key={order.id} className="p-4 bg-white rounded-xl shadow-sm flex items-center justify-between">
+                  <div key={order.id} className="p-4 bg-white rounded-xl shadow-sm flex items-center justify-between border border-slate-50">
                     <div className="flex items-center gap-4">
                       <div className="p-2 bg-green-100 rounded-full">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
                         <p className="font-bold">ORD-{order.id}</p>
-                        <p className="text-xs text-muted-foreground">Delivered at {isClient ? new Date(order.createdAt).toLocaleTimeString() : '...'}</p>
+                        <p className="text-xs text-muted-foreground font-medium">Delivered at {new Date(order.updatedAt || order.createdAt).toLocaleTimeString()}</p>
                       </div>
                     </div>
-                    <p className="font-bold text-primary">₹{order.total.toFixed(2)}</p>
+                    <p className="font-bold text-primary">₹{order.total?.toFixed(2)}</p>
                   </div>
                 ))
               )}
@@ -236,72 +268,37 @@ export default function DeliveryDashboard() {
               <DollarSign className="h-20 w-20" />
             </div>
             <CardHeader>
-              <CardTitle className="text-lg">Earnings Today</CardTitle>
+              <CardTitle className="text-lg font-bold">Earnings Today</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-black font-headline tracking-tighter">₹1,425.00</p>
-              <div className="mt-4 flex items-center gap-4 text-sm font-medium">
+              <p className="text-4xl font-bold font-headline tracking-tighter">₹{todayEarnings.toFixed(2)}</p>
+              <div className="mt-4 flex items-center gap-4 text-sm font-bold">
                 <div className="flex flex-col">
-                  <span>Orders</span>
-                  <span className="text-xl">12</span>
+                  <span className="text-white/60 text-[10px] uppercase tracking-wider">Orders</span>
+                  <span className="text-xl">{historyOrders.length}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span>Tips</span>
-                  <span className="text-xl">₹420.00</span>
-                </div>
-                <div className="flex flex-col">
-                  <span>Bonus</span>
-                  <span className="text-xl">₹150.00</span>
+                  <span className="text-white/60 text-[10px] uppercase tracking-wider">Bonus</span>
+                  <span className="text-xl">₹0.00</span>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="border-t border-white/10 pt-4">
-              <Button variant="ghost" className="w-full text-white hover:bg-white/10 text-xs font-bold uppercase tracking-widest">
-                View Earnings Details
-              </Button>
-            </CardFooter>
           </Card>
 
           <Card className="border-none shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" /> Recent Alerts
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-3 bg-primary/5 rounded-lg border-l-4 border-primary space-y-1">
                 <p className="text-xs font-bold">New Bonus Available!</p>
-                <p className="text-[10px] text-muted-foreground">Complete 3 more orders before 9 PM for a ₹200 bonus.</p>
+                <p className="text-[10px] text-muted-foreground font-medium">Complete 3 more orders before 9 PM for a ₹200 bonus.</p>
               </div>
               <div className="p-3 bg-accent/5 rounded-lg border-l-4 border-accent space-y-1">
                 <p className="text-xs font-bold">Traffic Alert</p>
-                <p className="text-[10px] text-muted-foreground">Heavy traffic on 5th Ave. Consider taking the detour via Broadway.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Shift Performance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-medium">
-                  <span>On-time Delivery</span>
-                  <span className="text-primary">98%</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[98%]"></div>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-medium">
-                  <span>Customer Rating</span>
-                  <span className="text-accent">4.9/5</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-accent w-[90%]"></div>
-                </div>
+                <p className="text-[10px] text-muted-foreground font-medium">Heavy traffic on Civil Lines. Consider taking detour.</p>
               </div>
             </CardContent>
           </Card>
