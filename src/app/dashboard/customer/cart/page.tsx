@@ -89,9 +89,7 @@ export default function CustomerCart() {
           <ArrowLeft className="h-5 w-5 text-slate-900" />
         </Button>
         <h2 className="text-lg font-semibold text-slate-900">My Cart</h2>
-        <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-2.5">
-          <ShoppingBag className="h-5 w-5 text-slate-900" />
-        </div>
+        <div className="w-10" /> {/* Spacer to keep title centered */}
       </div>
       
       {cart.length === 0 ? (
