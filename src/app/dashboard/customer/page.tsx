@@ -13,8 +13,6 @@ import {
   MapPin, 
   Clock,
   ChevronDown,
-  Mic,
-  Wallet,
   User as UserIcon,
   Home as HomeIcon,
   LayoutGrid,
@@ -35,7 +33,6 @@ import {
   Trash2,
   CheckCircle2,
   LogOut,
-  Navigation,
   Loader2,
   Phone,
   Building2,
@@ -229,7 +226,7 @@ export default function CustomerDashboard() {
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: profile?.address || 'Your saved address',
+      address: onboardingForm.address || profile?.address || 'Your saved address',
     };
     placeOrder(newOrder);
     setSelectedOrderId(newOrder.id);
@@ -422,28 +419,34 @@ export default function CustomerDashboard() {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10 shrink-0">
-                    <UserIcon className="h-5 w-5 text-slate-700" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl w-48">
-                  <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    {user?.name || 'My Profile'}
-                  </div>
-                  <Separator className="my-1" />
-                  <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
-                    <MapPin className="h-4 w-4 mr-2" /> Edit Location
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
-                    <Package className="h-4 w-4 mr-2" /> My Orders
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
-                    <LogOut className="h-4 w-4 mr-2" /> Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCurrentView('cart')} className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-full">
+                   <ShoppingCart className="h-6 w-6" />
+                   {cart.length > 0 && <span className="absolute top-0 right-0 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{cart.length}</span>}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-10 w-10 shrink-0">
+                      <UserIcon className="h-5 w-5 text-slate-700" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl w-48">
+                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {user?.name || 'My Profile'}
+                    </div>
+                    <Separator className="my-1" />
+                    <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer">
+                      <MapPin className="h-4 w-4 mr-2" /> Edit Location
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
+                      <Package className="h-4 w-4 mr-2" /> My Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
+                      <LogOut className="h-4 w-4 mr-2" /> Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </header>
           )}
 
@@ -521,7 +524,7 @@ export default function CustomerDashboard() {
             </main>
           )}
 
-          {/* Categories View (Sidebar based browser) */}
+          {/* Categories View */}
           {currentView === 'categories' && (
             <div className="flex-1 flex overflow-hidden">
               <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
@@ -713,7 +716,7 @@ export default function CustomerDashboard() {
                 <button onClick={() => setCurrentView('home')}>
                   <ArrowLeft className="h-6 w-6 text-slate-900" />
                 </button>
-                <h2 className="text-2xl font-black text-slate-900">Track your Order</h2>
+                <h2 className="text-2xl font-black text-slate-900">My Orders</h2>
               </header>
 
               <main className="p-4 space-y-4">
@@ -725,20 +728,10 @@ export default function CustomerDashboard() {
                   </div>
                 ) : (
                   <>
-                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Address</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-1">
-                        <p className="text-sm font-bold text-slate-900">{selectedOrder.address}</p>
-                        {profile.nearby && <p className="text-xs text-slate-500 font-medium">Near {profile.nearby}, {profile.address.split(',').pop()?.trim()}</p>}
-                      </CardContent>
-                    </Card>
-
-                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
+                    <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white mb-4">
                       <CardContent className="p-6">
                         <h3 className="text-base font-black text-slate-900 mb-6">
-                          {selectedOrder.status === 'DELIVERED' ? 'Order delivered successfully' : 'Order picked up before time by Swift Drones & Co.'}
+                          Active Tracking: ORD-{selectedOrder.id}
                         </h3>
 
                         <div className="relative space-y-8 pl-12">
@@ -754,7 +747,7 @@ export default function CustomerDashboard() {
                             <div>
                               <p className="text-sm font-black text-slate-900">Order Placed</p>
                               <p className="text-xs text-slate-400 font-medium">
-                                {selectedOrder.items.map(i => `${i.quantity}x${i.name}`).join(', ')}
+                                {selectedOrder.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
                               </p>
                             </div>
                           </div>
@@ -840,7 +833,7 @@ export default function CustomerDashboard() {
                   <p className="text-slate-500 font-medium">Arrival at {profile.address} in 9 mins.</p>
                 </div>
 
-                <Card className="w-full max-w-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
+                <Card className="w-full max-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Order ID</span>
                     <span className="font-black text-slate-900">#{latestOrder.id}</span>
@@ -912,7 +905,7 @@ export default function CustomerDashboard() {
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-black text-slate-900">Confirm Your Order?</AlertDialogTitle>
                 <AlertDialogDescription className="font-medium text-slate-500">
-                  Are you sure you want to place this order? You will pay ₹{(cartTotal + 2).toFixed(2)} upon arrival at {profile.address}.
+                  Are you sure you want to place this order? You will pay ₹{(cartTotal + 2).toFixed(2)} upon arrival at {onboardingForm.address || profile.address}.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-row gap-2 mt-4">
