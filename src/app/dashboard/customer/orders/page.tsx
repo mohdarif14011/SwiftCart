@@ -3,7 +3,7 @@
 
 import { useAppStore } from '@/app/lib/store';
 import { Badge } from '@/components/ui/badge';
-import { Package, Truck, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, ArrowLeft, Phone } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,19 @@ export default function CustomerOrders() {
             <h3 className="text-xl font-bold text-slate-900">Order Placed!</h3>
             <p className="text-sm text-slate-500 font-medium">ORD-{activeOrder.id} • Arriving soon</p>
           </div>
-          <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm bg-white/60 py-2 px-4 rounded-full w-fit mx-auto border border-green-100/50">
-            <Truck className="h-4 w-4" /> Tracking Live
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm bg-white/60 py-2 px-4 rounded-full w-fit mx-auto border border-green-100/50">
+              <Truck className="h-4 w-4" /> Tracking Live
+            </div>
+            
+            <Button 
+              asChild
+              className="rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all px-6 h-12 shadow-lg shadow-slate-200"
+            >
+              <a href="tel:+919876543210">
+                <Phone className="mr-2 h-4 w-4" /> Call Delivery Partner
+              </a>
+            </Button>
           </div>
         </div>
       )}
@@ -89,8 +100,18 @@ export default function CustomerOrders() {
               <Separator className="bg-slate-50" />
               
               <div className="flex justify-between items-center pt-1">
-                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
-                  <Clock className="h-4 w-4" /> Est. Arrival: 12 mins
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    <Clock className="h-4 w-4" /> Est. Arrival: 12 mins
+                  </div>
+                  {o.status !== 'DELIVERED' && (
+                    <button 
+                      className="text-primary text-[11px] font-bold flex items-center gap-1 hover:underline mt-1"
+                      onClick={() => window.location.href = 'tel:+919876543210'}
+                    >
+                      <Phone className="h-3 w-3" /> Call Partner
+                    </button>
+                  )}
                 </div>
                 <span className="text-xl font-bold text-primary">₹{o.total.toFixed(2)}</span>
               </div>
