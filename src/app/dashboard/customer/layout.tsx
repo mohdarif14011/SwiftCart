@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth, useFirestore, useDoc, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import Link from 'next/navigation';
 
 export default function CustomerLayout({ children }: { children: ReactNode }) {
   const { cart, setUser, searchQuery, setSearchQuery } = useAppStore();
@@ -79,48 +78,52 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     return <main className="min-h-screen bg-white">{children}</main>;
   }
 
+  const isHomePage = pathname === '/dashboard/customer';
+
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
-      <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 overflow-hidden flex-1">
-            <div className="flex flex-col cursor-pointer min-w-0" onClick={() => router.push('/dashboard/customer/onboarding')}>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
-                <ChevronDown className="h-3 w-3 text-slate-400" />
+      {isHomePage && (
+        <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 overflow-hidden flex-1">
+              <div className="flex flex-col cursor-pointer min-w-0" onClick={() => router.push('/dashboard/customer/onboarding')}>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
+                  <ChevronDown className="h-3 w-3 text-slate-400" />
+                </div>
+                <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
+                  {profile?.address || 'Set delivery location'}
+                </span>
               </div>
-              <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
-                {profile?.address || 'Set delivery location'}
-              </span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
+                    <UserIcon className="h-5 w-5 text-slate-700" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl w-48">
+                  <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">{firebaseUser?.displayName || 'My Profile'}</div>
+                  <Separator className="my-1" />
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/onboarding')} className="font-bold cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/orders')} className="font-bold cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
-                  <UserIcon className="h-5 w-5 text-slate-700" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl w-48">
-                <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">{firebaseUser?.displayName || 'My Profile'}</div>
-                <Separator className="my-1" />
-                <DropdownMenuItem onClick={() => router.push('/dashboard/customer/onboarding')} className="font-bold cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Profile</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/dashboard/customer/orders')} className="font-bold cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder='Search groceries...' 
+              className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
+              value={searchQuery || ''}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder='Search groceries...' 
-            className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
-            value={searchQuery || ''}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className="flex-1">
         {children}
