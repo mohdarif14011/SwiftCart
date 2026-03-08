@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
   const { products, setProducts, setUser } = useAppStore();
-  const [search, setSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [agentSearch, setAgentSearch] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const router = useRouter();
@@ -61,10 +64,29 @@ export default function AdminDashboard() {
   const { data: customers } = useCollection(customersQuery);
   const { data: agents } = useCollection(agentsQuery);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.category.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtered Lists
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => 
+      p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+      p.category.toLowerCase().includes(productSearch.toLowerCase())
+    );
+  }, [products, productSearch]);
+
+  const filteredAgents = useMemo(() => {
+    if (!agents) return [];
+    return agents.filter(a => 
+      `${a.firstName} ${a.lastName}`.toLowerCase().includes(agentSearch.toLowerCase()) ||
+      a.email.toLowerCase().includes(agentSearch.toLowerCase())
+    );
+  }, [agents, agentSearch]);
+
+  const filteredCustomers = useMemo(() => {
+    if (!customers) return [];
+    return customers.filter(c => 
+      `${c.firstName} ${c.lastName}`.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      c.email.toLowerCase().includes(customerSearch.toLowerCase())
+    );
+  }, [customers, customerSearch]);
 
   const handleDeleteProduct = (id: string) => {
     setProducts(products.filter(p => p.id !== id));
@@ -109,26 +131,20 @@ export default function AdminDashboard() {
     
     let secondaryApp;
     try {
-      // 1. Create a temporary secondary Firebase app instance to register the user
-      // This avoids signing out the current Admin user
       secondaryApp = initializeApp(firebaseConfig, 'SecondaryOnboarding');
       const secondaryAuth = getAuth(secondaryApp);
       
-      // 2. Create the Auth Account
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, agentForm.email, agentForm.password);
       const uid = userCredential.user.uid;
       
-      // 3. Clean up secondary app immediately
       await signOut(secondaryAuth);
       await deleteApp(secondaryApp);
 
-      // 4. Use main Firestore instance to grant the Security Role
       setDocumentNonBlocking(doc(db, 'roles_delivery_agent', uid), {
         assignedAt: new Date().toISOString(),
         active: true
       }, { merge: true });
 
-      // 5. Create the Delivery Agent Profile
       setDocumentNonBlocking(doc(db, 'deliveryAgents', uid), {
         id: uid,
         firstName: agentForm.firstName,
@@ -149,7 +165,6 @@ export default function AdminDashboard() {
         title: "Onboarding Failed", 
         description: error.message || "Could not create agent account."
       });
-      // Ensure cleanup if creation fails
       if (secondaryApp) {
         try { await deleteApp(secondaryApp); } catch(e) {}
       }
@@ -222,7 +237,8 @@ export default function AdminDashboard() {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
             <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Products</TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
+            <TabsTrigger value="fleet" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
+            <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Customers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
@@ -299,8 +315,8 @@ export default function AdminDashboard() {
                     <Input 
                       placeholder="Search products..." 
                       className="pl-10"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
                     />
                   </div>
                 </div>
@@ -355,217 +371,239 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="users">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Delivery Agents Management */}
-              <Card className="border-none shadow-sm md:col-span-2">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold">Active Fleet</CardTitle>
-                    <CardDescription>Manage your delivery agents. Only you (the Admin) can create new agent accounts.</CardDescription>
-                  </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="default" className="gap-2 bg-accent hover:bg-accent/90">
-                        <UserPlus className="h-4 w-4" /> Create Agent Account
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Add New Delivery Agent</DialogTitle>
-                        <CardDescription>Enter the agent's details. An authentication account and profile will be created.</CardDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="agent-first">First Name</Label>
+          <TabsContent value="fleet">
+            <Card className="border-none shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold">Active Fleet</CardTitle>
+                  <CardDescription>Manage your delivery agents and track their status.</CardDescription>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="default" className="gap-2 bg-accent hover:bg-accent/90">
+                      <UserPlus className="h-4 w-4" /> Create Agent Account
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New Delivery Agent</DialogTitle>
+                      <CardDescription>Enter the agent's details. An authentication account and profile will be created.</CardDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="agent-first">First Name</Label>
+                          <Input 
+                            id="agent-first" 
+                            placeholder="John" 
+                            value={agentForm.firstName}
+                            onChange={(e) => setAgentForm({...agentForm, firstName: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="agent-last">Last Name</Label>
+                          <Input 
+                            id="agent-last" 
+                            placeholder="Smith" 
+                            value={agentForm.lastName}
+                            onChange={(e) => setAgentForm({...agentForm, lastName: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-email">Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="agent-email" 
+                            type="email"
+                            className="pl-10"
+                            placeholder="john.smith@swiftcart.com" 
+                            value={agentForm.email}
+                            onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="agent-phone">Phone Number</Label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
-                              id="agent-first" 
-                              placeholder="John" 
-                              value={agentForm.firstName}
-                              onChange={(e) => setAgentForm({...agentForm, firstName: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="agent-last">Last Name</Label>
-                            <Input 
-                              id="agent-last" 
-                              placeholder="Smith" 
-                              value={agentForm.lastName}
-                              onChange={(e) => setAgentForm({...agentForm, lastName: e.target.value})}
+                              id="agent-phone" 
+                              className="pl-10"
+                              placeholder="+91 98765 43210" 
+                              value={agentForm.phone}
+                              onChange={(e) => setAgentForm({...agentForm, phone: e.target.value})}
                             />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="agent-email">Email Address</Label>
+                          <Label htmlFor="agent-pass">Password</Label>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
-                              id="agent-email" 
-                              type="email"
+                              id="agent-pass" 
+                              type="password"
                               className="pl-10"
-                              placeholder="john.smith@swiftcart.com" 
-                              value={agentForm.email}
-                              onChange={(e) => setAgentForm({...agentForm, email: e.target.value})}
+                              placeholder="••••••••" 
+                              value={agentForm.password}
+                              onChange={(e) => setAgentForm({...agentForm, password: e.target.value})}
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="agent-phone">Phone Number</Label>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input 
-                                id="agent-phone" 
-                                className="pl-10"
-                                placeholder="+91 98765 43210" 
-                                value={agentForm.phone}
-                                onChange={(e) => setAgentForm({...agentForm, phone: e.target.value})}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="agent-pass">Password</Label>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input 
-                                id="agent-pass" 
-                                type="password"
-                                className="pl-10"
-                                placeholder="••••••••" 
-                                value={agentForm.password}
-                                onChange={(e) => setAgentForm({...agentForm, password: e.target.value})}
-                              />
-                            </div>
-                          </div>
-                        </div>
                       </div>
-                      <DialogFooter>
-                        <Button 
-                          className="w-full h-12 text-base font-bold" 
-                          onClick={handleAddAgent}
-                          disabled={isAddingAgent}
-                        >
-                          {isAddingAgent ? (
-                            <>
-                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                              Creating Account...
-                            </>
-                          ) : (
-                            "Create & Grant Access"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead>Agent</TableHead>
-                          <TableHead>Contact</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Joined</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {agents?.map((agent) => (
-                          <TableRow key={agent.id}>
-                            <TableCell>
-                              <div className="font-medium">{agent.firstName} {agent.lastName}</div>
-                              <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType || 'E-Bike'}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-xs font-medium">{agent.email}</div>
-                              <div className="text-[10px] text-muted-foreground">{agent.phone || 'No Phone'}</div>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                agent.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {agent.status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {agent.joinedAt ? new Date(agent.joinedAt).toLocaleDateString() : 'Initial'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteUser('deliveryAgents', agent.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {(!agents || agents.length === 0) && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                              No delivery agents in the fleet yet.
-                            </TableCell>
-                          </TableRow>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        className="w-full h-12 text-base font-bold" 
+                        onClick={handleAddAgent}
+                        disabled={isAddingAgent}
+                      >
+                        {isAddingAgent ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Creating Account...
+                          </>
+                        ) : (
+                          "Create & Grant Access"
                         )}
-                      </TableBody>
-                    </Table>
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search fleet by name or email..." 
+                      className="pl-10"
+                      value={agentSearch}
+                      onChange={(e) => setAgentSearch(e.target.value)}
+                    />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Agent</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAgents.map((agent) => (
+                        <TableRow key={agent.id}>
+                          <TableCell>
+                            <div className="font-medium">{agent.firstName} {agent.lastName}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType || 'E-Bike'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs font-medium">{agent.email}</div>
+                            <div className="text-[10px] text-muted-foreground">{agent.phone || 'No Phone'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              agent.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {agent.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {agent.joinedAt ? new Date(agent.joinedAt).toLocaleDateString() : 'Initial'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteUser('deliveryAgents', agent.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredAgents.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No matching delivery agents found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {/* Customers View (Read Only for Admin) */}
-              <Card className="border-none shadow-sm md:col-span-2">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold">Registered Customers</CardTitle>
-                    <CardDescription>View all shoppers on the platform</CardDescription>
+          <TabsContent value="customers">
+            <Card className="border-none shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold">Registered Customers</CardTitle>
+                  <CardDescription>View all shoppers on the platform.</CardDescription>
+                </div>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search customers by name or email..." 
+                      className="pl-10"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                    />
                   </div>
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Phone</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
+                </div>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCustomers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{user.email}</TableCell>
+                          <TableCell className="text-xs">{user.phone || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteUser('customers', user.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customers?.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{user.email}</TableCell>
-                            <TableCell className="text-xs">{user.phone || 'N/A'}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteUser('customers', user.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {(!customers || customers.length === 0) && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No customers found</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                      ))}
+                      {filteredCustomers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            No matching customers found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
