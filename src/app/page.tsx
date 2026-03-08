@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Zap, ShieldCheck, MapPin } from 'lucide-react';
+import { ShoppingCart, Zap, Shield, Truck } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -12,10 +12,10 @@ export default function Home() {
           <span className="ml-2 text-2xl font-bold font-headline text-primary tracking-tight">SwiftCart</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link href="/auth" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link href="/auth/customer" className="text-sm font-medium hover:text-primary transition-colors">
             Login
           </Link>
-          <Link href="/auth" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link href="/auth/customer" className="text-sm font-medium hover:text-primary transition-colors">
             Get Started
           </Link>
         </nav>
@@ -34,55 +34,28 @@ export default function Home() {
               </div>
               <div className="space-x-4">
                 <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
-                  <Link href="/auth">Start Shopping</Link>
+                  <Link href="/auth/customer">Start Shopping</Link>
                 </Button>
-                <Button variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/10">
-                  How it Works
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-white">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <Zap className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold font-headline">Ultra Fast</h3>
-                <p className="text-sm text-muted-foreground">Delivery within 15-30 minutes for all items in your neighborhood.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="p-4 bg-accent/10 rounded-full">
-                  <ShieldCheck className="h-6 w-6 text-accent" />
-                </div>
-                <h3 className="text-xl font-bold font-headline">Freshness Guaranteed</h3>
-                <p className="text-sm text-muted-foreground">Hand-picked fresh produce and dairy from trusted local partners.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <ShoppingCart className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold font-headline">Smart Lists</h3>
-                <p className="text-sm text-muted-foreground">Use AI to generate shopping lists based on your meal ideas.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="p-4 bg-accent/10 rounded-full">
-                  <MapPin className="h-6 w-6 text-accent" />
-                </div>
-                <h3 className="text-xl font-bold font-headline">Live Tracking</h3>
-                <p className="text-sm text-muted-foreground">Real-time GPS tracking of your delivery agent from store to door.</p>
               </div>
             </div>
           </div>
         </section>
       </main>
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t bg-white">
-        <p className="text-xs text-muted-foreground">© 2024 SwiftCart Inc. All rights reserved.</p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-xs hover:underline underline-offset-4" href="#">Terms of Service</Link>
-          <Link className="text-xs hover:underline underline-offset-4" href="#">Privacy</Link>
+      <footer className="flex flex-col gap-4 sm:flex-row py-8 w-full shrink-0 items-center px-4 md:px-6 border-t bg-white">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">© 2024 SwiftCart Inc. All rights reserved.</p>
+          <div className="flex gap-4">
+            <Link className="text-[10px] hover:underline underline-offset-4 text-muted-foreground" href="#">Terms of Service</Link>
+            <Link className="text-[10px] hover:underline underline-offset-4 text-muted-foreground" href="#">Privacy</Link>
+          </div>
+        </div>
+        <nav className="sm:ml-auto flex flex-wrap justify-center gap-4 sm:gap-6 items-center">
+          <Link href="/auth/staff" className="text-xs font-bold text-slate-500 hover:text-primary flex items-center gap-1.5 transition-colors">
+            <Shield className="h-3.5 w-3.5" /> Admin Portal
+          </Link>
+          <Link href="/auth/staff" className="text-xs font-bold text-slate-500 hover:text-primary flex items-center gap-1.5 transition-colors">
+            <Truck className="h-3.5 w-3.5" /> Delivery Portal
+          </Link>
         </nav>
       </footer>
     </div>

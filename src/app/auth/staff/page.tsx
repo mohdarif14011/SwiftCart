@@ -45,8 +45,6 @@ export default function StaffAuthPage() {
         setUser({ id: uid, name: 'Agent', email, role: 'DELIVERY_AGENT' });
         router.push('/dashboard/delivery');
       } else {
-        // Fallback for prototyping/mocking if roles aren't in DB yet
-        // In a real app, we'd sign out if no role found
         toast({ title: "Role check", description: "No staff role found. Please contact an administrator." });
       }
     } catch (error: any) {
@@ -64,7 +62,7 @@ export default function StaffAuthPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md mb-8">
         <Button variant="ghost" asChild className="mb-4">
-          <Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to selection</Link>
+          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Back to home</Link>
         </Button>
       </div>
 

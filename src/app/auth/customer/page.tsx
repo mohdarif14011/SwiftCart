@@ -45,7 +45,7 @@ export default function CustomerAuthPage() {
         description: `Signed in as ${user.displayName || user.email}` 
       });
       
-      // Dashboard will handle the onboarding view if docSnap.exists() is false
+      // Dashboard will handle the onboarding view
       router.push('/dashboard/customer');
     } catch (error: any) {
       console.error(error);
@@ -63,7 +63,7 @@ export default function CustomerAuthPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md mb-8">
         <Button variant="ghost" asChild className="mb-4">
-          <Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to selection</Link>
+          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Back to home</Link>
         </Button>
       </div>
       
