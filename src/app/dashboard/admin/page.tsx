@@ -14,27 +14,34 @@ import {
   Search, 
   Package, 
   DollarSign, 
-  Layers, 
   LogOut,
   Users,
   Truck,
-  ShieldAlert,
-  UserPlus
+  UserPlus,
+  Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';
-import { useFirestore } from '@/firebase';
-import { collection, doc, deleteDoc, setDoc } from 'firebase/firestore';
-import { useCollection } from '@/firebase';
-import { useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
   const { products, setProducts, setUser } = useAppStore();
   const [search, setSearch] = useState('');
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isAddingAgent, setIsAddingAgent] = useState(false);
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
+
+  // Form states for adding product
+  const [prodForm, setProdForm] = useState({ name: '', category: '', price: '', inventory: '10' });
+  
+  // Form states for adding agent
+  const [agentForm, setAgentForm] = useState({ uid: '', firstName: '', lastName: '' });
 
   // Real-time collections for user management
   const customersQuery = useMemoFirebase(() => collection(db, 'customers'), [db]);
@@ -48,19 +55,70 @@ export default function AdminDashboard() {
   );
 
   const handleDeleteProduct = (id: string) => {
+    // For MVP, we manage local state for products as they are defined in INITIAL_PRODUCTS
+    // In a full implementation, this would also call deleteDocumentNonBlocking(doc(db, 'products', id))
     setProducts(products.filter(p => p.id !== id));
+    toast({ title: "Product Removed", description: "The item has been removed from the catalog." });
   };
 
-  const handleDeleteUser = async (col: string, id: string) => {
-    try {
-      await deleteDoc(doc(db, col, id));
-      // Also remove from roles if applicable
-      if (col === 'deliveryAgents') {
-        await deleteDoc(doc(db, 'roles_delivery_agent', id));
-      }
-    } catch (error) {
-      console.error("Failed to delete user", error);
+  const handleDeleteUser = (col: string, id: string) => {
+    deleteDocumentNonBlocking(doc(db, col, id));
+    if (col === 'deliveryAgents') {
+      deleteDocumentNonBlocking(doc(db, 'roles_delivery_agent', id));
     }
+    toast({ title: "User Deleted", description: "The account and role have been revoked." });
+  };
+
+  const handleAddProduct = () => {
+    if (!prodForm.name || !prodForm.category || !prodForm.price) return;
+    
+    setIsAddingProduct(true);
+    const newProduct = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: prodForm.name,
+      category: prodForm.category,
+      price: parseFloat(prodForm.price),
+      inventory: parseInt(prodForm.inventory),
+      imageUrl: `https://picsum.photos/seed/${prodForm.name}/300/300`,
+      description: `Freshly stocked ${prodForm.name}`
+    };
+
+    setProducts([...products, newProduct]);
+    // Optional: persist to Firestore products collection if you want global sync
+    // setDocumentNonBlocking(doc(db, 'products', newProduct.id), newProduct, { merge: true });
+
+    toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
+    setProdForm({ name: '', category: '', price: '', inventory: '10' });
+    setIsAddingProduct(false);
+  };
+
+  const handleAddAgent = () => {
+    if (!agentForm.uid || !agentForm.firstName || !agentForm.lastName) {
+      toast({ variant: "destructive", title: "Error", description: "All fields are required." });
+      return;
+    }
+
+    setIsAddingAgent(true);
+    
+    // 1. Grant the Security Role
+    setDocumentNonBlocking(doc(db, 'roles_delivery_agent', agentForm.uid), {
+      assignedAt: new Date().toISOString(),
+      active: true
+    }, { merge: true });
+
+    // 2. Create the Delivery Agent Profile
+    setDocumentNonBlocking(doc(db, 'deliveryAgents', agentForm.uid), {
+      id: agentForm.uid,
+      firstName: agentForm.firstName,
+      lastName: agentForm.lastName,
+      status: 'Available',
+      vehicleType: 'E-Bike',
+      joinedAt: new Date().toISOString()
+    }, { merge: true });
+
+    toast({ title: "Agent Onboarded", description: `${agentForm.firstName} now has delivery access.` });
+    setAgentForm({ uid: '', firstName: '', lastName: '' });
+    setIsAddingAgent(false);
   };
 
   const handleLogout = () => {
@@ -127,7 +185,7 @@ export default function AdminDashboard() {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
             <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Products</TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">User Management</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
@@ -150,21 +208,49 @@ export default function AdminDashboard() {
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
                         <Label htmlFor="name">Product Name</Label>
-                        <Input id="name" placeholder="Organic Strawberries" />
+                        <Input 
+                          id="name" 
+                          placeholder="Organic Strawberries" 
+                          value={prodForm.name}
+                          onChange={(e) => setProdForm({...prodForm, name: e.target.value})}
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                           <Label htmlFor="category">Category</Label>
-                          <Input id="category" placeholder="Fruits" />
+                          <Input 
+                            id="category" 
+                            placeholder="Fruits" 
+                            value={prodForm.category}
+                            onChange={(e) => setProdForm({...prodForm, category: e.target.value})}
+                          />
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="price">Price ($)</Label>
-                          <Input id="price" type="number" step="0.01" placeholder="4.99" />
+                          <Input 
+                            id="price" 
+                            type="number" 
+                            step="0.01" 
+                            placeholder="4.99" 
+                            value={prodForm.price}
+                            onChange={(e) => setProdForm({...prodForm, price: e.target.value})}
+                          />
                         </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="stock">Initial Stock</Label>
+                        <Input 
+                          id="stock" 
+                          type="number" 
+                          value={prodForm.inventory}
+                          onChange={(e) => setProdForm({...prodForm, inventory: e.target.value})}
+                        />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit" className="w-full bg-primary">Create Listing</Button>
+                      <Button onClick={handleAddProduct} disabled={isAddingProduct} className="w-full bg-primary">
+                        {isAddingProduct ? <Loader2 className="animate-spin" /> : "Create Listing"}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -234,83 +320,63 @@ export default function AdminDashboard() {
 
           <TabsContent value="users">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Customers Management */}
-              <Card className="border-none shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold">Customers</CardTitle>
-                    <CardDescription>View and manage shoppers</CardDescription>
-                  </div>
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customers?.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{user.email}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteUser('customers', user.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {(!customers || customers.length === 0) && (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No customers found</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Delivery Agents Management */}
-              <Card className="border-none shadow-sm">
+              <Card className="border-none shadow-sm md:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl font-bold">Delivery Agents</CardTitle>
-                    <CardDescription>Manage active fleet</CardDescription>
+                    <CardTitle className="text-xl font-bold">Active Fleet</CardTitle>
+                    <CardDescription>Manage your delivery agents. Only you (the Admin) can grant or revoke access.</CardDescription>
                   </div>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <UserPlus className="h-4 w-4" /> Add Agent
+                      <Button variant="default" className="gap-2 bg-accent hover:bg-accent/90">
+                        <UserPlus className="h-4 w-4" /> Onboard Agent
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Onboard New Delivery Agent</DialogTitle>
-                        <CardDescription>Assign agent roles by their authentication UID</CardDescription>
+                        <CardDescription>Assign agent roles by their authentication UID. Multiple agents can be added to the fleet.</CardDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="agent-uid">User UID</Label>
-                          <Input id="agent-uid" placeholder="Firebase User UID" />
+                          <Label htmlFor="agent-uid">User UID (from Firebase Auth)</Label>
+                          <Input 
+                            id="agent-uid" 
+                            placeholder="e.g. gHZ9n7s2b9..." 
+                            value={agentForm.uid}
+                            onChange={(e) => setAgentForm({...agentForm, uid: e.target.value})}
+                          />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="agent-name">Display Name</Label>
-                          <Input id="agent-name" placeholder="John Agent" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="agent-first">First Name</Label>
+                            <Input 
+                              id="agent-first" 
+                              placeholder="John" 
+                              value={agentForm.firstName}
+                              onChange={(e) => setAgentForm({...agentForm, firstName: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="agent-last">Last Name</Label>
+                            <Input 
+                              id="agent-last" 
+                              placeholder="Agent" 
+                              value={agentForm.lastName}
+                              onChange={(e) => setAgentForm({...agentForm, lastName: e.target.value})}
+                            />
+                          </div>
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button className="w-full">Grant Delivery Privileges</Button>
+                        <Button 
+                          className="w-full" 
+                          onClick={handleAddAgent}
+                          disabled={isAddingAgent}
+                        >
+                          {isAddingAgent ? <Loader2 className="animate-spin" /> : "Grant Delivery Privileges"}
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -322,6 +388,7 @@ export default function AdminDashboard() {
                         <TableRow>
                           <TableHead>Agent</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Joined</TableHead>
                           <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -330,7 +397,7 @@ export default function AdminDashboard() {
                           <TableRow key={agent.id}>
                             <TableCell>
                               <div className="font-medium">{agent.firstName} {agent.lastName}</div>
-                              <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType}</div>
+                              <div className="text-[10px] text-muted-foreground uppercase">{agent.vehicleType} • UID: {agent.id.slice(0, 8)}...</div>
                             </TableCell>
                             <TableCell>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -338,6 +405,9 @@ export default function AdminDashboard() {
                               }`}>
                                 {agent.status}
                               </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {agent.joinedAt ? new Date(agent.joinedAt).toLocaleDateString() : 'Initial'}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button 
@@ -353,7 +423,58 @@ export default function AdminDashboard() {
                         ))}
                         {(!agents || agents.length === 0) && (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No agents found</TableCell>
+                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                              No delivery agents in the fleet yet.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Customers View (Read Only for Admin) */}
+              <Card className="border-none shadow-sm md:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold">Registered Customers</CardTitle>
+                    <CardDescription>View all shoppers on the platform</CardDescription>
+                  </div>
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customers?.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{user.email}</TableCell>
+                            <TableCell className="text-xs">{user.phone || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteUser('customers', user.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {(!customers || customers.length === 0) && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No customers found</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
