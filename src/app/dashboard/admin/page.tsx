@@ -23,7 +23,10 @@ import {
   Lock,
   Phone,
   Image as ImageIcon,
-  Tag
+  Tag,
+  ClipboardList,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -31,13 +34,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
-import { Product } from '@/app/types';
+import { Product, Order } from '@/app/types';
+import { Badge } from '@/components/ui/badge';
 
 const CATEGORIES = [
   'Vegetables',
@@ -54,11 +58,13 @@ export default function AdminDashboard() {
   const [productSearch, setProductSearch] = useState('');
   const [agentSearch, setAgentSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
   
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
 
   const router = useRouter();
   const db = useFirestore();
@@ -85,11 +91,14 @@ export default function AdminDashboard() {
     phone: '' 
   });
 
-  // Real-time collections for user management
+  // Real-time collections
   const customersQuery = useMemoFirebase(() => collection(db, 'customers'), [db]);
   const agentsQuery = useMemoFirebase(() => collection(db, 'deliveryAgents'), [db]);
+  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  
   const { data: customers } = useCollection(customersQuery);
   const { data: agents } = useCollection(agentsQuery);
+  const { data: remoteOrders } = useCollection(ordersQuery);
 
   // Filtered Lists
   const filteredProducts = useMemo(() => {
@@ -114,6 +123,14 @@ export default function AdminDashboard() {
       c.email.toLowerCase().includes(customerSearch.toLowerCase())
     );
   }, [customers, customerSearch]);
+
+  const filteredOrders = useMemo(() => {
+    if (!remoteOrders) return [];
+    return remoteOrders.filter(o => 
+      o.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      o.address.toLowerCase().includes(orderSearch.toLowerCase())
+    );
+  }, [remoteOrders, orderSearch]);
 
   const handleDeleteProduct = (id: string) => {
     setProducts(products.filter(p => p.id !== id));
@@ -236,6 +253,22 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAssignAgent = (agentId: string) => {
+    if (!assigningOrder) return;
+    
+    updateDocumentNonBlocking(doc(db, 'orders', assigningOrder.id), {
+      agentId: agentId,
+      status: 'PICKED_UP',
+      assignedAt: new Date().toISOString()
+    });
+
+    toast({ 
+      title: "Agent Assigned", 
+      description: `Order ${assigningOrder.id} has been dispatched.` 
+    });
+    setAssigningOrder(null);
+  };
+
   const handleLogout = () => {
     setUser(null);
     router.push('/');
@@ -278,10 +311,10 @@ export default function AdminDashboard() {
           </Card>
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Total Customers</CardDescription>
+              <CardDescription className="text-xs uppercase tracking-wider font-bold">Active Orders</CardDescription>
               <CardTitle className="text-3xl font-bold flex items-center justify-between">
-                {customers?.length || 0}
-                <Users className="h-6 w-6 text-accent opacity-20" />
+                {filteredOrders.filter(o => o.status !== 'DELIVERED').length}
+                <ClipboardList className="h-6 w-6 text-accent opacity-20" />
               </CardTitle>
             </CardHeader>
           </Card>
@@ -296,7 +329,7 @@ export default function AdminDashboard() {
           </Card>
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs uppercase tracking-wider font-bold">Active Agents</CardDescription>
+              <CardDescription className="text-xs uppercase tracking-wider font-bold">Fleet Size</CardDescription>
               <CardTitle className="text-3xl font-bold flex items-center justify-between">
                 {agents?.length || 0}
                 <Truck className="h-6 w-6 text-blue-500 opacity-20" />
@@ -308,6 +341,7 @@ export default function AdminDashboard() {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
             <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Products</TabsTrigger>
+            <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Orders</TabsTrigger>
             <TabsTrigger value="fleet" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
             <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Customers</TabsTrigger>
           </TabsList>
@@ -517,6 +551,106 @@ export default function AdminDashboard() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold font-headline">Order Stream</CardTitle>
+                <CardDescription>Track and dispatch customer orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search orders by ID or address..." 
+                      className="pl-10"
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Order ID</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-bold">ORD-{order.id}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(order.createdAt).toLocaleTimeString()}
+                          </TableCell>
+                          <TableCell className="font-bold text-primary">${order.total.toFixed(2)}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-xs">{order.address}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {!order.agentId && order.status !== 'DELIVERED' ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" onClick={() => setAssigningOrder(order)} className="bg-accent hover:bg-accent/90">
+                                    Assign Agent
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Select Delivery Agent</DialogTitle>
+                                    <CardDescription>Choose an available agent to deliver order {order.id}</CardDescription>
+                                  </DialogHeader>
+                                  <div className="grid gap-4 py-4">
+                                    {agents?.filter(a => a.status === 'Available').map(agent => (
+                                      <div key={agent.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition-colors">
+                                        <div>
+                                          <p className="font-bold">{agent.firstName} {agent.lastName}</p>
+                                          <p className="text-xs text-muted-foreground">{agent.vehicleType || 'E-Bike'}</p>
+                                        </div>
+                                        <Button size="sm" onClick={() => handleAssignAgent(agent.id)}>Assign</Button>
+                                      </div>
+                                    ))}
+                                    {agents?.filter(a => a.status === 'Available').length === 0 && (
+                                      <p className="text-center text-sm text-muted-foreground">No agents currently available.</p>
+                                    )}
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            ) : order.agentId ? (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground justify-end">
+                                <Truck className="h-3 w-3" /> Dispatched
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-green-600 font-bold justify-end">
+                                <CheckCircle className="h-3 w-3" /> Completed
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredOrders.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-20 text-muted-foreground">
+                            <Clock className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                            No orders matching your search.
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>

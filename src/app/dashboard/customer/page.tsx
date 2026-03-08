@@ -236,17 +236,22 @@ export default function CustomerDashboard() {
 
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
+    const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const newOrder = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      userId: user?.id || 'anon',
+      id: orderId,
+      userId: firebaseUser?.uid || user?.id || 'anon',
       items: [...cart],
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
       address: profile?.address || onboardingForm.address || 'Your saved address',
     };
+
+    // Save to Firestore so Admin can see it
+    setDocumentNonBlocking(doc(db, 'orders', orderId), newOrder, { merge: true });
+
     placeOrder(newOrder);
-    setSelectedOrderId(newOrder.id);
+    setSelectedOrderId(orderId);
     setCurrentView('order-success');
   };
 

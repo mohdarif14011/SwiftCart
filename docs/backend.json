@@ -150,6 +150,21 @@
         }
       },
       "required": ["id", "firstName", "lastName", "email", "status"]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a customer order.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "address": { "type": "string" },
+        "agentId": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -210,6 +225,16 @@
             "$ref": "#/backend/entities/Category"
           },
           "description": "Product categories."
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Global order tracking."
         }
       }
     ]

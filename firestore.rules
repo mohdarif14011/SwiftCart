@@ -4,8 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * SwiftCart Security Rules - v1.0.1
-     * Synchronized with 'customers' and 'deliveryAgents' collection naming.
+     * SwiftCart Security Rules - v1.0.2
      */
 
     // --- Helper Functions ---
@@ -28,9 +27,6 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    /**
-     * @description Customer profiles.
-     */
     match /customers/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
@@ -39,9 +35,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Delivery Agent profiles.
-     */
     match /deliveryAgents/{agentId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin() || isOwner(agentId);
@@ -49,9 +42,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Product Catalog.
-     */
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -62,9 +52,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    /**
-     * @description Role tracking (internal).
-     */
+    match /orders/{orderId} {
+      allow create: if isSignedIn();
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isDeliveryAgent());
+      allow list: if isAdmin() || isDeliveryAgent() || (isSignedIn() && request.query.limit <= 100);
+      allow update: if isAdmin() || isDeliveryAgent();
+    }
+
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list, write: if isAdmin();
