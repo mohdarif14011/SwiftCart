@@ -4,9 +4,10 @@
 import { useAppStore } from '@/app/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, Truck, CheckCircle2, Clock } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { Package, Truck, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const STATUS_LABELS: Record<string, string> = {
   CONFIRMED: 'Confirmed',
@@ -19,13 +20,24 @@ const STATUS_LABELS: Record<string, string> = {
 export default function CustomerOrders() {
   const { orders } = useAppStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const successId = searchParams.get('success');
 
   const activeOrder = successId ? orders.find(o => o.id === successId) : null;
 
   return (
-    <div className="p-4 bg-slate-50 space-y-6">
-      <h2 className="text-2xl font-black text-slate-900">My Orders</h2>
+    <div className="p-4 bg-slate-50 min-h-screen space-y-6">
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => router.back()} 
+          className="rounded-full bg-white shadow-sm hover:bg-slate-100 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-900" />
+        </Button>
+        <h2 className="text-2xl font-black text-slate-900">My Orders</h2>
+      </div>
       
       {successId && activeOrder && (
         <Card className="border-none bg-green-50 shadow-none p-6 text-center space-y-4 rounded-3xl animate-in fade-in zoom-in duration-300">
@@ -45,7 +57,7 @@ export default function CustomerOrders() {
       {orders.length === 0 ? (
         <div className="py-20 text-center text-slate-400 font-bold">No orders yet.</div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-20">
           {orders.map((o) => (
             <div key={o.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-4">
               <div className="flex justify-between items-start">
