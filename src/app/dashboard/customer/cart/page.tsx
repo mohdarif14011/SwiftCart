@@ -30,6 +30,7 @@ export default function CustomerCart() {
     if (profile) {
       setDeliveryAddress(profile.address || '');
       setCustomerName(`${profile.firstName || ''} ${profile.lastName || ''}`.trim());
+      // The contact number now defaults to the one saved in profile (onboarding)
       setContactNumber(profile.phone || '');
     }
   }, [profile]);
