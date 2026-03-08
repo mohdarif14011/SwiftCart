@@ -26,7 +26,8 @@ import {
   Tag,
   ClipboardList,
   CheckCircle,
-  Clock
+  Clock,
+  LayoutGrid
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -341,6 +342,7 @@ export default function AdminDashboard() {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white border p-1 h-12 shadow-sm rounded-xl">
             <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Products</TabsTrigger>
+            <TabsTrigger value="categories" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Categories</TabsTrigger>
             <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Orders</TabsTrigger>
             <TabsTrigger value="fleet" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Fleet Management</TabsTrigger>
             <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white px-6">Customers</TabsTrigger>
@@ -553,6 +555,33 @@ export default function AdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">Category Management</CardTitle>
+                <CardDescription>Organize your product catalog into searchable categories.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {CATEGORIES.map((cat) => (
+                    <div key={cat} className="p-6 border rounded-2xl flex items-center justify-between bg-white shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 bg-primary/10 rounded-xl">
+                          <LayoutGrid className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="font-bold">{cat}</span>
+                      </div>
+                      <Badge variant="secondary">{filteredProducts.filter(p => p.category === cat).length} Products</Badge>
+                    </div>
+                  ))}
+                  <div className="p-6 border border-dashed rounded-2xl flex items-center justify-center bg-muted/5 group cursor-pointer hover:border-primary transition-colors">
+                    <span className="text-sm font-bold text-muted-foreground group-hover:text-primary">+ Add New Category</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

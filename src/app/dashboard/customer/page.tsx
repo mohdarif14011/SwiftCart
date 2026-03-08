@@ -124,6 +124,7 @@ export default function CustomerDashboard() {
     }
   }, [firebaseUser, user, setUser]);
 
+  // Auth redirect logic moved to useEffect to avoid hydration issues
   useEffect(() => {
     if (!isUserLoading && !firebaseUser) {
       router.replace('/auth/customer');
@@ -396,15 +397,6 @@ export default function CustomerDashboard() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400">Pinned Coordinates</label>
-                  <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-2xl">
-                    <Navigation className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-bold text-slate-600">
-                      {gpsLocation ? `${gpsLocation.lat.toFixed(4)}, ${gpsLocation.lng.toFixed(4)}` : 'No location pinned'}
-                    </span>
-                  </div>
-                </div>
               </div>
               <div className="flex-1" />
               <Button 
@@ -511,6 +503,26 @@ export default function CustomerDashboard() {
             </main>
           )}
 
+          {currentView === 'categories' && (
+            <main className="flex-1 p-4 bg-slate-50 space-y-4">
+              <h2 className="text-2xl font-black text-slate-900 px-2">Shop by Category</h2>
+              <div className="grid grid-cols-3 gap-4">
+                {CATEGORIES.slice(1).map((cat) => (
+                  <button 
+                    key={cat.name} 
+                    onClick={() => { setActiveCategory(cat.name); setCurrentView('home'); }} 
+                    className="flex flex-col items-center gap-3 p-4 bg-white rounded-3xl border border-slate-100 shadow-sm hover:border-primary transition-colors group"
+                  >
+                    <div className="p-4 bg-slate-50 rounded-2xl text-slate-700 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <cat.icon className="h-8 w-8" />
+                    </div>
+                    <span className="text-[10px] font-black text-center uppercase tracking-tight leading-tight">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </main>
+          )}
+
           {currentView === 'orders' && (
             <main className="flex-1 p-4 space-y-4 bg-slate-50">
               <h2 className="text-2xl font-black text-slate-900 px-2">My Orders</h2>
@@ -547,6 +559,10 @@ export default function CustomerDashboard() {
             <button onClick={() => { setCurrentView('home'); setActiveCategory('All'); }} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
               <HomeIcon className="h-6 w-6" />
               <span className="text-[10px] font-bold">Home</span>
+            </button>
+            <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
+              <LayoutGrid className="h-6 w-6" />
+              <span className="text-[10px] font-bold">Categories</span>
             </button>
             <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
               <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
