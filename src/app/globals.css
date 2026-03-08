@@ -54,8 +54,14 @@
   * {
     @apply border-border;
   }
+  html {
+    @apply h-full overflow-hidden;
+    background-color: hsl(var(--background));
+  }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased h-full overflow-y-auto;
+    min-height: 100dvh;
+    touch-action: manipulation;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-semibold tracking-normal;
