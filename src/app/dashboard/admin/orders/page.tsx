@@ -3,20 +3,20 @@
 
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Package, Clock, Truck, CheckCircle, ClipboardList } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Package, Clock, Truck, ClipboardList, User, Phone, MapPin } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
 import { Order } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 export default function AdminOrders() {
   const [orderSearch, setOrderSearch] = useState('');
-  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -34,114 +34,166 @@ export default function AdminOrders() {
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, orderSearch]);
 
-  const handleAssignAgent = (agentId: string) => {
-    if (!assigningOrder) return;
-    
-    updateDocumentNonBlocking(doc(db, 'orders', assigningOrder.id), {
+  const handleAssignAgent = (orderId: string, agentId: string) => {
+    updateDocumentNonBlocking(doc(db, 'orders', orderId), {
       agentId: agentId,
       status: 'PICKED_UP',
       assignedAt: new Date().toISOString()
     });
 
-    toast({ title: "Agent Assigned", description: `Order ${assigningOrder.id} has been dispatched.` });
-    setAssigningOrder(null);
+    toast({ title: "Agent Assigned", description: `Order ${orderId} has been dispatched.` });
   };
 
   return (
-    <Card className="border-none shadow-sm">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <ClipboardList className="h-6 w-6 text-primary" />
-          <CardTitle className="text-2xl font-bold font-headline">Order Stream</CardTitle>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-bold tracking-tight">Order Stream</h1>
+          <p className="text-sm text-muted-foreground">Monitor real-time fulfillment and tracking.</p>
         </div>
-        <CardDescription>Track and dispatch customer orders</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search orders by ID or address..." 
-              className="pl-10"
-              value={orderSearch}
-              onChange={(e) => setOrderSearch(e.target.value)}
-            />
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="Search by ID or address..." 
+          className="pl-10 h-12 rounded-2xl bg-white border-none shadow-sm focus-visible:ring-primary/20"
+          value={orderSearch}
+          onChange={(e) => setOrderSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
+        {filteredOrders.map((order) => (
+          <div 
+            key={order.id} 
+            className="group relative flex items-center justify-between p-4 rounded-3xl bg-white border border-slate-100 hover:border-primary/20 transition-all cursor-pointer shadow-sm"
+            onClick={() => setSelectedOrder(order)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full border border-slate-100 flex items-center justify-center bg-white shrink-0">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold truncate">ORD-{order.id}</p>
+                <p className="text-[11px] text-muted-foreground truncate font-medium">
+                  ₹{order.total?.toFixed(2)} • {order.address}
+                </p>
+              </div>
+            </div>
+            <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase py-1 px-3 rounded-full">
+              {order.status.replace('_', ' ')}
+            </Badge>
           </div>
-        </div>
-        <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-bold">ORD-{order.id}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(order.createdAt).toLocaleTimeString()}
-                  </TableCell>
-                  <TableCell className="font-bold text-primary">₹{order.total.toFixed(2)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-xs">{order.address}</TableCell>
-                  <TableCell>
-                    <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase">
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {!order.agentId && order.status !== 'DELIVERED' ? (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm" onClick={() => setAssigningOrder(order)} className="bg-accent hover:bg-accent/90">
-                            Assign Agent
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Select Delivery Agent</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            {agents?.filter(a => a.status === 'Available').map(agent => (
-                              <div key={agent.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition-colors">
-                                <div>
-                                  <p className="font-bold">{agent.firstName} {agent.lastName}</p>
-                                  <p className="text-xs text-muted-foreground">{agent.vehicleType || 'E-Bike'}</p>
-                                </div>
-                                <Button size="sm" onClick={() => handleAssignAgent(agent.id)}>Assign</Button>
-                              </div>
-                            ))}
-                            {agents?.filter(a => a.status === 'Available').length === 0 && (
-                              <p className="text-center text-sm text-muted-foreground">No agents currently available.</p>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    ) : (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground justify-end">
-                        <Truck className="h-3 w-3" /> {order.agentId ? 'Dispatched' : 'Completed'}
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
+        ))}
+
+        {filteredOrders.length === 0 && (
+          <div className="col-span-full py-32 text-center text-muted-foreground">
+            <Clock className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <p className="text-sm font-medium">No orders found.</p>
+          </div>
+        )}
+      </div>
+
+      <OrderDetailsDialog 
+        order={selectedOrder} 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)} 
+        agents={agents || []}
+        onAssign={handleAssignAgent}
+      />
+    </div>
+  );
+}
+
+function OrderDetailsDialog({ order, isOpen, onClose, agents, onAssign }: { order: Order | null, isOpen: boolean, onClose: () => void, agents: any[], onAssign: (oid: string, aid: string) => void }) {
+  if (!order) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none shadow-2xl">
+        <DialogHeader className="space-y-1">
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest border-primary/20 text-primary">ORD-{order.id}</Badge>
+            <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase">{order.status.replace('_', ' ')}</Badge>
+          </div>
+          <DialogTitle className="text-2xl font-bold tracking-tight">Order Details</DialogTitle>
+          <DialogDescription className="text-xs font-medium text-slate-400">{new Date(order.createdAt).toLocaleString()}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-6">
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Cart Items</h4>
+            <div className="space-y-3 bg-slate-50/50 p-4 rounded-[2rem] border border-slate-100">
+              {order.items?.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-600">{item.name} <span className="text-slate-400 font-medium">x{item.quantity}</span></span>
+                  <span className="font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
               ))}
-              {filteredOrders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-20 text-muted-foreground">
-                    <Clock className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                    No orders matching your search.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              <Separator className="bg-slate-200/50 my-1" />
+              <div className="flex justify-between text-base font-bold">
+                <span className="text-slate-900">Grand Total</span>
+                <span className="text-primary">₹{order.total?.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Shopper</h4>
+              <div className="flex items-center gap-2 text-[11px] font-bold bg-slate-50 p-3 rounded-2xl">
+                <User className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate">Arif Mohd</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Contact</h4>
+              <div className="flex items-center gap-2 text-[11px] font-bold bg-slate-50 p-3 rounded-2xl">
+                <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span>+91 9999999999</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Destination</h4>
+            <div className="flex items-start gap-3 text-[11px] font-bold bg-slate-50 p-4 rounded-2xl leading-relaxed">
+              <MapPin className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+              <span>{order.address}</span>
+            </div>
+          </div>
+
+          {!order.agentId && order.status !== 'DELIVERED' && (
+            <div className="pt-2 space-y-3">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary ml-1">Dispatch Fleet</h4>
+              <div className="grid gap-2 max-h-[160px] overflow-y-auto no-scrollbar">
+                {agents.filter(a => a.status === 'Available').map(agent => (
+                  <div key={agent.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-primary/20 transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/5 rounded-full">
+                        <Truck className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold">{agent.firstName} {agent.lastName}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-bold">{agent.vehicleType || 'E-Bike'}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={() => { onAssign(order.id, agent.id); onClose(); }} className="h-8 px-4 text-[10px] font-bold rounded-xl shadow-none">Dispatch</Button>
+                  </div>
+                ))}
+                {agents.filter(a => a.status === 'Available').length === 0 && (
+                  <div className="text-center py-4 bg-slate-50 rounded-2xl">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No available agents</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+
+        <Button variant="ghost" onClick={onClose} className="w-full rounded-2xl h-14 text-sm font-bold text-slate-500 hover:bg-slate-50">Dismiss</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
