@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { OrderStatus } from '@/app/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, limit } from 'firebase/firestore';
 
 export default function DeliveryDashboard() {
   const { setUser } = useAppStore();
@@ -35,7 +35,7 @@ export default function DeliveryDashboard() {
   // Real-time Orders from Firestore
   const ordersQuery = useMemoFirebase(() => {
     if (!firebaseUser?.uid) return null;
-    return collection(db, 'orders');
+    return query(collection(db, 'orders'), limit(100));
   }, [db, firebaseUser?.uid]);
 
   const { data: allOrders, isLoading: isOrdersLoading } = useCollection(ordersQuery);

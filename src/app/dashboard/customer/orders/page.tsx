@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { useMemo } from 'react';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,25 +26,26 @@ export default function CustomerOrders() {
   const { user: firebaseUser } = useUser();
   const successId = searchParams.get('success');
 
-  // Real-time Orders from Firestore
+  // Real-time Orders from Firestore - filtered by userId for security and performance
   const ordersQuery = useMemoFirebase(() => {
     if (!firebaseUser?.uid) return null;
-    return collection(db, 'orders');
+    return query(
+      collection(db, 'orders'),
+      where('userId', '==', firebaseUser.uid),
+      limit(50)
+    );
   }, [db, firebaseUser?.uid]);
 
-  const { data: allOrders, isLoading } = useCollection(ordersQuery);
+  const { data: customerOrders, isLoading } = useCollection(ordersQuery);
 
-  // Filter and sort orders for this customer
-  const customerOrders = useMemo(() => {
-    if (!allOrders || !firebaseUser?.uid) return [];
-    return allOrders
-      .filter(o => o.userId === firebaseUser.uid)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [allOrders, firebaseUser?.uid]);
+  const sortedOrders = useMemo(() => {
+    if (!customerOrders) return [];
+    return [...customerOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [customerOrders]);
 
   const activeOrder = useMemo(() => {
-    return successId ? customerOrders.find(o => o.id === successId) : null;
-  }, [customerOrders, successId]);
+    return successId ? sortedOrders.find(o => o.id === successId) : null;
+  }, [sortedOrders, successId]);
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen space-y-6">
@@ -81,11 +82,11 @@ export default function CustomerOrders() {
         <div className="py-20 flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : customerOrders.length === 0 ? (
+      ) : sortedOrders.length === 0 ? (
         <div className="py-20 text-center text-slate-400 font-medium">No orders yet.</div>
       ) : (
         <div className="space-y-4 pb-20">
-          {customerOrders.map((o) => (
+          {sortedOrders.map((o) => (
             <div key={o.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-5">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
@@ -129,6 +130,14 @@ export default function CustomerOrders() {
                 </div>
                 <span className="text-xl font-bold text-primary">₹{o.total?.toFixed(2)}</span>
               </div>
+              
+              {o.status !== 'DELIVERED' && o.agentId && (
+                <Button variant="outline" className="w-full gap-2 border-primary text-primary" asChild>
+                  <a href={`tel:${o.contactNumber || '9999999999'}`}>
+                    <Phone className="h-4 w-4" /> Call Delivery Partner
+                  </a>
+                </Button>
+              )}
             </div>
           ))}
         </div>

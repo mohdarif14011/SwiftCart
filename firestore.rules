@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * SwiftCart Security Rules - v1.0.2
+     * SwiftCart Security Rules - v1.0.3
      */
 
     // --- Helper Functions ---
@@ -55,7 +55,9 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isDeliveryAgent());
-      allow list: if isAdmin() || isDeliveryAgent() || (isSignedIn() && request.query.limit <= 100);
+      // Admins and Agents can list all orders. 
+      // Customers can only list orders where they are the owner.
+      allow list: if isAdmin() || isDeliveryAgent() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow update: if isAdmin() || isDeliveryAgent();
     }
 

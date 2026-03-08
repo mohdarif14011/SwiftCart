@@ -10,7 +10,7 @@ import { Search, Package, Clock, Truck, CheckCircle, ClipboardList } from 'lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, limit } from 'firebase/firestore';
 import { Order } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,8 +20,8 @@ export default function AdminOrders() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
-  const agentsQuery = useMemoFirebase(() => collection(db, 'deliveryAgents'), [db]);
+  const ordersQuery = useMemoFirebase(() => query(collection(db, 'orders'), limit(100)), [db]);
+  const agentsQuery = useMemoFirebase(() => query(collection(db, 'deliveryAgents'), limit(100)), [db]);
   
   const { data: orders } = useCollection(ordersQuery);
   const { data: agents } = useCollection(agentsQuery);
