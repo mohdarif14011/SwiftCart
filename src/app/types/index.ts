@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  location?: { lat: number; lng: number };
 }
 
 export interface Product {
@@ -54,6 +55,8 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   address: string;
+  customerLocation?: { lat: number; lng: number };
   agentId?: string;
   agentLocation?: { lat: number; lng: number };
+  updatedAt?: string;
 }

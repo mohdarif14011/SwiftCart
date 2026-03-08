@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
-import { OrderStatus } from '@/app/types';
+import { OrderStatus, Order } from '@/app/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
 
@@ -31,6 +31,9 @@ export default function DeliveryDashboard() {
   const router = useRouter();
   const db = useFirestore();
   const { user: firebaseUser } = useUser();
+
+  // Simulated live location coordinates for the agent
+  const [agentPos, setAgentPos] = useState({ lat: 25.5808, lng: 84.8327 });
 
   // Real-time Orders from Firestore
   const ordersQuery = useMemoFirebase(() => {
@@ -46,15 +49,24 @@ export default function DeliveryDashboard() {
     return allOrders.filter(o => o.agentId === firebaseUser.uid);
   }, [allOrders, firebaseUser?.uid]);
 
-  // Simulated live location coordinates
-  const [agentPos, setAgentPos] = useState({ lat: 25.5808, lng: 84.8327 });
+  const assignedOrders = useMemo(() => myOrders.filter(o => o.status !== 'DELIVERED'), [myOrders]);
+  const historyOrders = useMemo(() => myOrders.filter(o => o.status === 'DELIVERED'), [myOrders]);
+
+  // The order currently being worked on
+  const activeOrder = useMemo(() => {
+    // Priority: Out for delivery > Picked Up > Preparing > Confirmed
+    return assignedOrders.find(o => o.status === 'OUT_FOR_DELIVERY') || 
+           assignedOrders.find(o => o.status === 'PICKED_UP') ||
+           assignedOrders[0];
+  }, [assignedOrders]);
 
   useEffect(() => {
     setIsClient(true);
+    // Simulate agent movement
     const interval = setInterval(() => {
       setAgentPos(prev => ({
-        lat: prev.lat + (Math.random() - 0.5) * 0.0005,
-        lng: prev.lng + (Math.random() - 0.5) * 0.0005,
+        lat: prev.lat + (Math.random() - 0.5) * 0.0002,
+        lng: prev.lng + (Math.random() - 0.5) * 0.0002,
       }));
     }, 5000);
     return () => clearInterval(interval);
@@ -79,12 +91,20 @@ export default function DeliveryDashboard() {
     router.push('/');
   };
 
-  const assignedOrders = myOrders.filter(o => o.status !== 'DELIVERED');
-  const historyOrders = myOrders.filter(o => o.status === 'DELIVERED');
-
   const todayEarnings = useMemo(() => {
     return historyOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   }, [historyOrders]);
+
+  // Construct map URL based on active order destination
+  const mapUrl = useMemo(() => {
+    const baseUrl = "https://maps.google.com/maps";
+    if (activeOrder?.customerLocation) {
+      // Show route from agent to customer
+      return `${baseUrl}?saddr=${agentPos.lat},${agentPos.lng}&daddr=${activeOrder.customerLocation.lat},${activeOrder.customerLocation.lng}&z=15&output=embed`;
+    }
+    // Default to agent position
+    return `${baseUrl}?q=${agentPos.lat},${agentPos.lng}&z=16&output=embed`;
+  }, [agentPos, activeOrder]);
 
   if (!isClient) return null;
 
@@ -99,74 +119,74 @@ export default function DeliveryDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-xs font-bold text-accent uppercase tracking-wider">Online</span>
+            <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Active</span>
             <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{firebaseUser?.email}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5 text-muted-foreground" />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full">
+            <LogOut className="h-4 w-4 text-slate-400" />
           </Button>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto w-full p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-none shadow-sm overflow-hidden bg-white">
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="border-none shadow-sm overflow-hidden bg-white rounded-3xl">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
-                <CardTitle className="text-xl font-bold font-headline">Live Route Map</CardTitle>
-                <CardDescription>Real-time delivery tracking & traffic</CardDescription>
+                <CardTitle className="text-xl font-bold tracking-tight">Live Route Map</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-400">Real-time delivery tracking & traffic</CardDescription>
               </div>
-              <Badge variant="outline" className="border-accent text-accent animate-pulse">
+              <Badge variant="outline" className="border-accent/20 text-accent bg-accent/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full">
                 GPS Active
               </Badge>
             </CardHeader>
-            <CardContent className="p-0 h-[400px] relative bg-muted overflow-hidden">
+            <CardContent className="p-0 h-[400px] relative bg-slate-50 overflow-hidden">
               <iframe
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 loading="lazy"
                 allowFullScreen
-                src={`https://maps.google.com/maps?q=${agentPos.lat},${agentPos.lng}&z=16&output=embed`}
-                className="w-full h-full grayscale opacity-80"
+                src={mapUrl}
+                className="w-full h-full grayscale opacity-70"
               />
-              <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
               
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div 
-                  className="w-10 h-10 bg-primary rounded-full border-4 border-white shadow-2xl flex items-center justify-center animate-bounce"
-                >
-                  <Truck className="h-5 w-5 text-white" />
-                </div>
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-100 shadow-sm z-10">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Destination</p>
+                <p className="text-xs font-bold text-slate-900 truncate max-w-[200px]">
+                  {activeOrder ? activeOrder.address : 'No active mission'}
+                </p>
               </div>
-              
-              <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-lg border shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    <Navigation className="h-4 w-4 text-primary" />
+
+              <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-4 rounded-[2rem] border border-slate-100 shadow-xl flex items-center justify-between z-10">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Navigation className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Location</p>
-                    <p className="text-sm font-semibold">Active Session: {agentPos.lat.toFixed(4)}, {agentPos.lng.toFixed(4)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Current Position</p>
+                    <p className="text-sm font-bold text-slate-900">Active Session: {agentPos.lat.toFixed(4)}, {agentPos.lng.toFixed(4)}</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" className="text-xs gap-1">
-                  Navigate <ExternalLink className="h-3 w-3" />
+                <Button size="sm" variant="outline" className="rounded-xl border-slate-200 text-[10px] font-bold uppercase tracking-wider h-10 px-4" asChild>
+                  <a href={`https://www.google.com/maps/dir/?api=1&origin=${agentPos.lat},${agentPos.lng}&destination=${activeOrder?.customerLocation?.lat},${activeOrder?.customerLocation?.lng}&travelmode=driving`} target="_blank">
+                    Navigate <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </a>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 border-b">
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-6 border-b border-slate-100 px-2">
               <button 
-                className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'assigned' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'assigned' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}
                 onClick={() => setActiveTab('assigned')}
               >
-                Assigned Orders ({assignedOrders.length})
+                Assigned ({assignedOrders.length})
               </button>
               <button 
-                className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'history' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`pb-3 text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'history' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-600'}`}
                 onClick={() => setActiveTab('history')}
               >
                 Completed Today ({historyOrders.length})
@@ -175,86 +195,90 @@ export default function DeliveryDashboard() {
 
             <div className="space-y-4">
               {isOrdersLoading ? (
-                <div className="flex justify-center py-10">
+                <div className="flex justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : activeTab === 'assigned' ? (
                 assignedOrders.length > 0 ? (
                   assignedOrders.map(order => (
-                    <Card key={order.id} className="border-none shadow-sm hover:ring-1 ring-primary/20 transition-all">
+                    <Card key={order.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-3xl overflow-hidden bg-white">
                       <CardHeader className="pb-3">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="space-y-1">
                             <CardTitle className="text-lg font-bold">ORD-{order.id}</CardTitle>
-                            <CardDescription className="flex items-center gap-1 font-medium">
-                              <MapPin className="h-3 w-3" /> {order.address}
+                            <CardDescription className="flex items-start gap-1.5 font-medium text-slate-400 text-xs">
+                              <MapPin className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" /> {order.address}
                             </CardDescription>
                           </div>
-                          <Badge className={
-                            order.status === 'OUT_FOR_DELIVERY' ? 'bg-primary' : 'bg-muted text-foreground'
-                          }>
+                          <Badge variant="secondary" className="bg-slate-50 text-slate-600 text-[9px] font-bold uppercase tracking-wider border-none px-3 py-1">
                             {order.status.replace(/_/g, ' ')}
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent className="pb-4">
-                        <div className="flex items-center justify-between text-sm">
+                      <CardContent className="pb-5">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className="flex -space-x-2">
+                            <div className="flex -space-x-3">
                               {order.items?.slice(0, 3).map((item: any, idx: number) => (
-                                <div key={idx} className="h-8 w-8 rounded-full border-2 border-white bg-muted overflow-hidden">
+                                <div key={idx} className="h-10 w-10 rounded-full border-4 border-white bg-slate-50 overflow-hidden shadow-sm">
                                   <img src={item.imageUrl} alt="" className="object-cover w-full h-full" />
                                 </div>
                               ))}
                               {order.items?.length > 3 && (
-                                <div className="h-8 w-8 rounded-full border-2 border-white bg-primary/10 flex items-center justify-center text-[10px] font-bold">
+                                <div className="h-10 w-10 rounded-full border-4 border-white bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shadow-sm">
                                   +{order.items.length - 3}
                                 </div>
                               )}
                             </div>
-                            <p className="text-muted-foreground font-medium">{order.items?.length || 0} items • ₹{order.total?.toFixed(2)}</p>
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-slate-900">{order.items?.length || 0} Products</p>
+                              <p className="text-[10px] font-bold text-primary">₹{order.total?.toFixed(2)}</p>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            {order.contactNumber && (
-                              <Button variant="outline" size="icon" asChild className="h-8 w-8 rounded-full text-primary border-primary">
-                                <a href={`tel:${order.contactNumber}`}><Phone className="h-4 w-4" /></a>
-                              </Button>
-                            )}
-                          </div>
+                          {order.contactNumber && (
+                            <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-full bg-slate-50 hover:bg-primary/10 hover:text-primary transition-colors border border-slate-100">
+                              <a href={`tel:${order.contactNumber}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-0 flex gap-2">
+                      <CardFooter className="p-0 border-t border-slate-50">
                         <Button 
-                          className="flex-1 bg-primary font-bold"
+                          className="w-full h-14 rounded-none bg-primary hover:bg-primary/90 font-bold text-sm shadow-none"
                           onClick={() => handleStatusUpdate(order.id, order.status)}
                         >
                           {order.status === 'CONFIRMED' ? 'Start Preparation' : 
                            order.status === 'PREPARING' ? 'Mark as Picked Up' : 
                            order.status === 'PICKED_UP' ? 'Set Out for Delivery' :
-                           'Mark as Delivered'}
+                           'Complete Delivery'}
                         </Button>
                       </CardFooter>
                     </Card>
                   ))
                 ) : (
-                  <div className="text-center py-20 bg-white rounded-xl border-dashed border-2">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground font-medium">No active assignments</p>
+                  <div className="text-center py-24 bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                    <Package className="h-12 w-12 text-slate-200 mx-auto mb-3" />
+                    <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">No assigned orders</p>
                   </div>
                 )
               ) : (
                 historyOrders.map(order => (
-                  <div key={order.id} className="p-4 bg-white rounded-xl shadow-sm flex items-center justify-between border border-slate-50">
+                  <div key={order.id} className="p-5 bg-white rounded-3xl shadow-sm flex items-center justify-between border border-slate-50">
                     <div className="flex items-center gap-4">
-                      <div className="p-2 bg-green-100 rounded-full">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="p-3 bg-green-50 rounded-2xl">
+                        <CheckCircle className="h-6 w-6 text-green-500" />
                       </div>
-                      <div>
-                        <p className="font-bold">ORD-{order.id}</p>
-                        <p className="text-xs text-muted-foreground font-medium">Delivered at {new Date(order.updatedAt || order.createdAt).toLocaleTimeString()}</p>
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-slate-900">ORD-{order.id}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Completed • {new Date(order.updatedAt || order.createdAt).toLocaleTimeString()}
+                        </p>
                       </div>
                     </div>
-                    <p className="font-bold text-primary">₹{order.total?.toFixed(2)}</p>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">₹{order.total?.toFixed(2)}</p>
+                      <p className="text-[9px] font-bold text-slate-300 uppercase">Settled</p>
+                    </div>
                   </div>
                 ))
               )}
@@ -263,42 +287,42 @@ export default function DeliveryDashboard() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-sm bg-accent text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <DollarSign className="h-20 w-20" />
+          <Card className="border-none shadow-xl bg-slate-900 text-white rounded-[2.5rem] overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <DollarSign className="h-24 w-24" />
             </div>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Earnings Today</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-white/40">Earnings Today</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold font-headline tracking-tighter">₹{todayEarnings.toFixed(2)}</p>
-              <div className="mt-4 flex items-center gap-4 text-sm font-bold">
-                <div className="flex flex-col">
-                  <span className="text-white/60 text-[10px] uppercase tracking-wider">Orders</span>
-                  <span className="text-xl">{historyOrders.length}</span>
+            <CardContent className="space-y-6">
+              <p className="text-5xl font-bold tracking-tighter">₹{todayEarnings.toFixed(2)}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Orders</p>
+                  <p className="text-2xl font-bold">{historyOrders.length}</p>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-white/60 text-[10px] uppercase tracking-wider">Bonus</span>
-                  <span className="text-xl">₹0.00</span>
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Bonus</p>
+                  <p className="text-2xl font-bold text-accent">₹0</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" /> Recent Alerts
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" /> Active Feed
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 bg-primary/5 rounded-lg border-l-4 border-primary space-y-1">
-                <p className="text-xs font-bold">New Bonus Available!</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Complete 3 more orders before 9 PM for a ₹200 bonus.</p>
+              <div className="p-4 bg-slate-50 rounded-2xl border-l-4 border-primary space-y-1">
+                <p className="text-xs font-bold text-slate-900">Weekend Surge!</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Earn an extra ₹50 for every delivery completed after 8 PM tonight.</p>
               </div>
-              <div className="p-3 bg-accent/5 rounded-lg border-l-4 border-accent space-y-1">
-                <p className="text-xs font-bold">Traffic Alert</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Heavy traffic on Civil Lines. Consider taking detour.</p>
+              <div className="p-4 bg-slate-50 rounded-2xl border-l-4 border-accent space-y-1">
+                <p className="text-xs font-bold text-slate-900">System Alert</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Please ensure you have sufficient change for cash-on-delivery orders.</p>
               </div>
             </CardContent>
           </Card>

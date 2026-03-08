@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -58,6 +59,8 @@ export default function CustomerCart() {
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
     const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
+    
+    // Construct the order with precise customer coordinates from their profile
     const newOrder = {
       id: orderId,
       userId: firebaseUser?.uid || 'anonymous',
@@ -68,7 +71,8 @@ export default function CustomerCart() {
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
       address: deliveryAddress || 'Delivery to your current location',
-      paymentMethod: 'Scan and pay at the time of delivery',
+      customerLocation: profile?.location || null,
+      paymentMethod: 'Scan and pay at delivery',
     };
 
     setDoc(doc(db, 'orders', orderId), newOrder, { merge: true });
@@ -103,11 +107,11 @@ export default function CustomerCart() {
           <Button onClick={() => router.push('/dashboard/customer')} className="rounded-2xl h-12 px-8 font-bold bg-primary mt-4">Start Shopping</Button>
         </div>
       ) : (
-        <div className="px-6 space-y-6 mt-2">
-          <div className="space-y-2">
+        <div className="px-6 space-y-4 mt-2">
+          <div className="space-y-1">
             {cart.map((item) => (
               <div key={item.productId} className="py-3 flex gap-4 border-b border-slate-50 relative group">
-                <div className="h-16 w-16 rounded-xl bg-slate-50 flex-shrink-0 flex items-center justify-center p-2">
+                <div className="h-14 w-14 rounded-xl bg-slate-50 flex-shrink-0 flex items-center justify-center p-2">
                   <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
                 </div>
                 <div className="flex-1 flex flex-col justify-between py-0.5">
@@ -146,22 +150,22 @@ export default function CustomerCart() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2 px-4">
+          <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2 px-4 h-10">
             <TicketPercent className="h-4 w-4 text-slate-400" />
             <input 
               placeholder="Promo code" 
-              className="flex-1 border-none bg-transparent h-8 p-0 focus:ring-0 font-medium text-xs outline-none"
+              className="flex-1 border-none bg-transparent h-full p-0 focus:ring-0 font-medium text-xs outline-none"
             />
-            <Button size="sm" variant="ghost" className="h-8 rounded-lg text-primary font-bold text-xs uppercase hover:bg-white">Apply</Button>
+            <Button size="sm" variant="ghost" className="h-7 rounded-lg text-primary font-bold text-xs uppercase hover:bg-white">Apply</Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2">
               <User className="h-3.5 w-3.5 text-primary" />
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Personal Details</h3>
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-1">
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</Label>
                 <Input 
                   placeholder="Your Name" 
@@ -170,7 +174,7 @@ export default function CustomerCart() {
                   onChange={(e) => setCustomerName(e.target.value)}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Contact Number</Label>
                 <Input 
                   placeholder="Your Phone" 
@@ -182,7 +186,7 @@ export default function CustomerCart() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -210,11 +214,11 @@ export default function CustomerCart() {
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Payment Instruction</p>
-              <p className="text-[11px] font-medium">Scan & Pay at the time of delivery</p>
+              <p className="text-[11px] font-medium">Scan & Pay at delivery</p>
             </div>
           </div>
 
-          <div className="space-y-2 pt-2">
+          <div className="space-y-1.5 pt-2">
             <div className="flex justify-between items-center">
               <span className="text-xs font-medium text-slate-400">Subtotal</span>
               <span className="text-xs font-bold text-slate-900">₹{cartTotal.toFixed(2)}</span>
@@ -223,7 +227,7 @@ export default function CustomerCart() {
               <span className="text-xs font-medium text-slate-400">Delivery</span>
               <span className="text-xs font-bold text-slate-900">₹{deliveryFee.toFixed(2)}</span>
             </div>
-            <Separator className="bg-slate-50 my-2" />
+            <Separator className="bg-slate-50 my-1" />
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900">Total Amount</span>
               <span className="text-lg font-bold text-primary">₹{(cartTotal + deliveryFee).toFixed(2)}</span>
