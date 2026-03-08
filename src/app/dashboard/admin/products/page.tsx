@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/app/types';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 const CATEGORIES = [
   'Vegetables',
@@ -26,7 +28,10 @@ const CATEGORIES = [
 ];
 
 export default function AdminProducts() {
-  const { products, setProducts, updateProduct } = useAppStore();
+  const db = useFirestore();
+  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
+  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+  
   const [productSearch, setProductSearch] = useState('');
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -45,6 +50,7 @@ export default function AdminProducts() {
   });
 
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
     return products.filter(p => 
       p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
       p.category.toLowerCase().includes(productSearch.toLowerCase())
@@ -52,7 +58,7 @@ export default function AdminProducts() {
   }, [products, productSearch]);
 
   const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
+    deleteDocumentNonBlocking(doc(db, 'products', id));
     toast({ title: "Product Removed", description: "The item has been removed from the catalog." });
   };
 
@@ -94,8 +100,9 @@ export default function AdminProducts() {
     
     setIsSavingProduct(true);
     
+    const productId = editingProduct?.id || Math.random().toString(36).substr(2, 9);
     const productData: Product = {
-      id: editingProduct?.id || Math.random().toString(36).substr(2, 9),
+      id: productId,
       name: prodForm.name,
       category: prodForm.category,
       price: parseFloat(prodForm.price),
@@ -107,13 +114,12 @@ export default function AdminProducts() {
       offerPercentage: prodForm.offerPercentage ? parseFloat(prodForm.offerPercentage) : undefined
     };
 
-    if (editingProduct) {
-      updateProduct(productData);
-      toast({ title: "Product Updated", description: `${prodForm.name} changes have been saved.` });
-    } else {
-      setProducts([...products, productData]);
-      toast({ title: "Product Added", description: `${prodForm.name} is now live.` });
-    }
+    setDocumentNonBlocking(doc(db, 'products', productId), productData, { merge: true });
+    
+    toast({ 
+      title: editingProduct ? "Product Updated" : "Product Added", 
+      description: `${prodForm.name} changes have been saved.` 
+    });
 
     setIsSavingProduct(false);
     setIsProductDialogOpen(false);
@@ -145,62 +151,75 @@ export default function AdminProducts() {
             </div>
           </div>
           <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Weight</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Offer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                          <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
-                        </div>
-                        {product.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
-                        {product.category}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
-                    </TableCell>
-                    <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {product.offerPercentage ? (
-                        <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditProductClick(product)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteProduct(product.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {isLoading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Weight</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Offer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                            <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
+                          </div>
+                          {product.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase">
+                          {product.category}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {product.weight ? `${product.weight}${product.unit}` : 'N/A'}
+                      </TableCell>
+                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {product.offerPercentage ? (
+                          <span className="text-green-600 font-bold">{product.offerPercentage}% OFF</span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          (product.inventory || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {(product.inventory || 0) > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditProductClick(product)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteProduct(product.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
+                        No products found in catalog.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </CardContent>
       </Card>

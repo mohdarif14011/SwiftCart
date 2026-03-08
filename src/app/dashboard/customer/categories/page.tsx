@@ -1,13 +1,17 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, Search, Heart, Plus, Minus, ArrowLeft, Clock
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, Search, Heart, Plus, Minus, ArrowLeft, Clock, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Product } from '@/app/types';
 
 const CATEGORIES = [
   { name: 'Vegetables', icon: Leaf },
@@ -20,12 +24,16 @@ const CATEGORIES = [
 ];
 
 export default function CustomerCategories() {
-  const { products } = useAppStore();
   const router = useRouter();
+  const db = useFirestore();
+  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
+  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+  
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const [localSearch, setLocalSearch] = useState('');
 
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
     return products.filter(p => 
       p.category === activeCategory && 
       (p.name.toLowerCase().includes(localSearch.toLowerCase()) || 
@@ -97,7 +105,11 @@ export default function CustomerCategories() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 bg-slate-50/20">
-            {filteredProducts.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-x-3 gap-y-10 pb-20">
                 {filteredProducts.map(product => (
                   <ProductItem key={product.id} product={product} />

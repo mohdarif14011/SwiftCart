@@ -22,18 +22,11 @@ interface AppState {
   toggleFavorite: (productId: string) => void;
 }
 
-const INITIAL_PRODUCTS: Product[] = [
-  { id: '1', name: 'Fresh Bananas', category: 'Fruits', price: 0.99, inventory: 50, imageUrl: 'https://picsum.photos/seed/fruit1/300/300', description: 'Fresh organic bananas.', weight: 1, unit: 'kg' },
-  { id: '2', name: 'Whole Milk 1L', category: 'Dairy', price: 1.49, inventory: 20, imageUrl: 'https://picsum.photos/seed/dairy1/300/300', description: 'Fresh farm whole milk.', weight: 1000, unit: 'g' },
-  { id: '3', name: 'Artisan Bread', category: 'Bakery', price: 2.99, inventory: 15, imageUrl: 'https://picsum.photos/seed/bakery1/300/300', description: 'Baked fresh every morning.', weight: 400, unit: 'g' },
-  { id: '4', name: 'Baby Spinach', category: 'Vegetables', price: 1.99, inventory: 30, imageUrl: 'https://picsum.photos/seed/veg1/300/300', description: 'Fresh leafy baby spinach.', weight: 200, unit: 'g' },
-];
-
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       user: null,
-      products: INITIAL_PRODUCTS,
+      products: [],
       cart: [],
       orders: [],
       favorites: [],

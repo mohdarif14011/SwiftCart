@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Package, DollarSign, ClipboardList, Truck, Clock, User, Phone, MapPin } from 'lucide-react';
+import { Package, DollarSign, ClipboardList, Truck, Clock, User, Phone, MapPin, Loader2 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -12,25 +12,25 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Order } from '@/app/types';
+import { Order, Product } from '@/app/types';
 
 export default function AdminOverview() {
-  const { products } = useAppStore();
   const db = useFirestore();
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
   const ordersQuery = useMemoFirebase(() => query(collection(db, 'orders'), limit(50)), [db]);
   const agentsQuery = useMemoFirebase(() => query(collection(db, 'deliveryAgents'), limit(100)), [db]);
   
-  const { data: remoteOrders } = useCollection(ordersQuery);
-  const { data: agents } = useCollection(agentsQuery);
+  const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
+  const { data: remoteOrders, isLoading: ordersLoading } = useCollection<Order>(ordersQuery);
+  const { data: agents, isLoading: agentsLoading } = useCollection(agentsQuery);
 
   const activeOrdersCount = remoteOrders?.filter(o => o.status !== 'DELIVERED').length || 0;
   const totalRevenue = remoteOrders?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
   const availableAgents = agents?.filter(a => a.status === 'Available').length || 0;
 
-  // Sorting recent activity by date: Newest first
   const sortedRecentOrders = useMemo(() => {
     if (!remoteOrders) return [];
     return [...remoteOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -49,6 +49,14 @@ export default function AdminOverview() {
     });
   };
 
+  if (productsLoading || ordersLoading || agentsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -57,7 +65,7 @@ export default function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Products" value={products.length.toString()} icon={Package} />
+        <StatCard title="Products" value={(products?.length || 0).toString()} icon={Package} />
         <StatCard title="Active Orders" value={activeOrdersCount.toString()} icon={ClipboardList} color="text-amber-500" />
         <StatCard title="Daily Revenue" value={`₹${totalRevenue.toFixed(2)}`} icon={DollarSign} color="text-emerald-500" />
         <StatCard title="Fleet Status" value={`${availableAgents} Online`} icon={Truck} color="text-blue-500" />

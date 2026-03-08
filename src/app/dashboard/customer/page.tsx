@@ -1,12 +1,16 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, Clock
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, Clock, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Product } from '@/app/types';
 
 const CATEGORIES = [
   { name: 'All', icon: LayoutGrid },
@@ -20,10 +24,14 @@ const CATEGORIES = [
 ];
 
 export default function CustomerShop() {
-  const { products, searchQuery } = useAppStore();
+  const { searchQuery } = useAppStore();
+  const db = useFirestore();
+  const productsQuery = useMemoFirebase(() => collection(db, 'products'), [db]);
+  const { data: products, isLoading } = useCollection<Product>(productsQuery);
   const [activeCategory, setActiveCategory] = useState('All');
 
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
     let list = [...products];
     if (searchQuery) {
       list = list.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -35,13 +43,23 @@ export default function CustomerShop() {
   }, [products, searchQuery, activeCategory]);
 
   const groupedProducts = useMemo(() => {
-    const groups: Record<string, typeof products> = {};
+    const groups: Record<string, Product[]> = {};
+    if (!products) return groups;
     products.forEach(p => {
       if (!groups[p.category]) groups[p.category] = [];
       groups[p.category].push(p);
     });
     return groups;
   }, [products]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Catalog...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -58,17 +76,23 @@ export default function CustomerShop() {
 
       <div className="px-4 py-2 space-y-6">
         {activeCategory === 'All' && !searchQuery ? (
-          Object.entries(groupedProducts).map(([category, items]) => (
-            <section key={category} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 leading-tight">{category}</h2>
-                <button onClick={() => setActiveCategory(category)} className="text-primary text-sm font-bold">View all</button>
-              </div>
-              <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                {items.map(product => <ProductCard key={product.id} product={product} layout="horizontal" />)}
-              </div>
-            </section>
-          ))
+          Object.entries(groupedProducts).length > 0 ? (
+            Object.entries(groupedProducts).map(([category, items]) => (
+              <section key={category} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-slate-900 leading-tight">{category}</h2>
+                  <button onClick={() => setActiveCategory(category)} className="text-primary text-sm font-bold">View all</button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+                  {items.map(product => <ProductCard key={product.id} product={product} layout="horizontal" />)}
+                </div>
+              </section>
+            ))
+          ) : (
+            <div className="py-20 text-center opacity-40">
+              <p className="font-bold text-sm text-slate-900">Store is currently empty.</p>
+            </div>
+          )
         ) : (
           <section className="space-y-4">
             <h2 className="text-lg font-bold text-slate-900">{activeCategory === 'All' ? 'Search Results' : activeCategory}</h2>
