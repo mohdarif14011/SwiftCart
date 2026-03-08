@@ -1,12 +1,11 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, ArrowLeft, Loader2, ChevronRight, Navigation } from 'lucide-react';
-import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,16 +23,39 @@ export default function CustomerOnboarding() {
   const { user: firebaseUser } = useUser();
   const { toast } = useToast();
 
+  const userProfileRef = useMemoFirebase(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
+  const { data: profile } = useDoc(userProfileRef);
+
   useEffect(() => {
     handleAutoLocate();
   }, []);
+
+  // Populate form if profile already exists
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        phone: profile.phone || '',
+        address: profile.address || '',
+        nearby: profile.nearby || ''
+      });
+      if (profile.location) {
+        setGpsLocation(profile.location);
+      }
+    }
+  }, [profile]);
 
   const handleAutoLocate = () => {
     setLocating(true);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => { setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); },
-        () => { setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG }); setLocating(false); }
+        (pos) => { 
+          setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
+          setLocating(false); 
+        },
+        () => { 
+          setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG }); 
+          setLocating(false); 
+        }
       );
     } else {
       setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
@@ -63,7 +85,7 @@ export default function CustomerOnboarding() {
     };
 
     setDocumentNonBlocking(doc(db, 'customers', firebaseUser.uid), profileData, { merge: true });
-    toast({ title: "Profile Ready", description: "Welcome to SwiftCart!" });
+    toast({ title: "Profile Updated", description: "Your changes have been saved." });
     router.push('/dashboard/customer');
     setSaving(false);
   };
@@ -95,9 +117,14 @@ export default function CustomerOnboarding() {
             </Button>
           </div>
           <div className="p-8 bg-white border-t border-slate-50 shadow-2xl">
-            <Button className="w-full h-16 text-lg font-bold rounded-[2rem]" onClick={() => setView('details')} disabled={!gpsLocation}>
-              Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
+            <div className="flex gap-4">
+              <Button variant="ghost" className="h-16 w-16 rounded-full bg-slate-100 p-0" onClick={() => router.back()}>
+                <ArrowLeft className="h-6 w-6 text-slate-900" />
+              </Button>
+              <Button className="flex-1 h-16 text-lg font-bold rounded-[2rem]" onClick={() => setView('details')} disabled={!gpsLocation}>
+                Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </>
       ) : (
@@ -125,7 +152,7 @@ export default function CustomerOnboarding() {
           </div>
           <div className="flex-1" />
           <Button className="w-full h-16 text-lg font-bold rounded-[2rem] bg-primary mb-2 shadow-xl shadow-primary/20" onClick={handleComplete} disabled={saving}>
-            {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Start Shopping"}
+            {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Save Changes"}
           </Button>
         </div>
       )}

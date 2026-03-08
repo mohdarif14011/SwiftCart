@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ReactNode, useEffect, useState, useMemo } from 'react';
@@ -36,11 +35,10 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
     const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
 
+    // Only redirect TO onboarding if profile is missing.
+    // Do NOT redirect AWAY from onboarding if profile exists, as the user might be editing.
     if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
-    } 
-    else if (profile && isOnOnboarding) {
-      router.replace('/dashboard/customer');
     }
   }, [isClient, firebaseUser, isUserLoading, profile, isProfileLoading, pathname, router]);
 
