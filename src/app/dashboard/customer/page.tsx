@@ -99,6 +99,7 @@ export default function CustomerDashboard() {
   const [locating, setLocating] = useState(false);
   const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '', nearby: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [hasDismissedOnboarding, setHasDismissedOnboarding] = useState(false);
 
   const router = useRouter();
   const auth = useAuth();
@@ -124,12 +125,13 @@ export default function CustomerDashboard() {
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
+  // Automatically show onboarding only if no profile exists and we haven't just finished setting it up
   useEffect(() => {
-    if (isClient && !isUserLoading && !isProfileLoading && !profile && firebaseUser && currentView === 'home') {
+    if (isClient && !isUserLoading && !isProfileLoading && !profile && firebaseUser && currentView === 'home' && !hasDismissedOnboarding) {
       setCurrentView('onboarding-map');
       handleAutoLocate();
     }
-  }, [isClient, isUserLoading, isProfileLoading, profile, firebaseUser, currentView]);
+  }, [isClient, isUserLoading, isProfileLoading, profile, firebaseUser, currentView, hasDismissedOnboarding]);
 
   const handleAutoLocate = () => {
     setLocating(true);
@@ -181,6 +183,7 @@ export default function CustomerDashboard() {
     setDocumentNonBlocking(doc(db, 'customers', firebaseUser.uid), profileData, { merge: true });
 
     toast({ title: "Profile Saved", description: "Your delivery details are set." });
+    setHasDismissedOnboarding(true);
     setCurrentView('home');
     setSavingProfile(false);
   };
@@ -533,7 +536,6 @@ export default function CustomerDashboard() {
             </button>
           </nav>
           
-          {/* Order Success/Tracking View Integrated as a view if needed */}
           {currentView === 'order-success' && selectedOrder && (
             <div className="flex flex-col h-screen bg-white">
               <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
@@ -562,7 +564,6 @@ export default function CustomerDashboard() {
             </div>
           )}
           
-          {/* Favorites & Cart Views (Simplified templates as per logic above) */}
           {currentView === 'cart' && (
              <main className="flex-1 p-4 bg-slate-50 space-y-4">
                <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
