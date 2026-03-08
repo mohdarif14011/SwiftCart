@@ -34,7 +34,6 @@ export function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
-            data-ai-hint="grocery product"
           />
         ) : (
           <Package className="h-12 w-12 text-slate-200" />
