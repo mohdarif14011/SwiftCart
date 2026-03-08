@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -55,7 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -81,7 +82,6 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: 'Delivered',
 };
 
-// Fallback coordinates
 const FALLBACK_LAT = 25.4358;
 const FALLBACK_LNG = 81.8463;
 
@@ -95,7 +95,6 @@ export default function CustomerDashboard() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
-  // Onboarding/Profile state
   const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locating, setLocating] = useState(false);
   const [onboardingForm, setOnboardingForm] = useState({ phone: '', address: '', nearby: '' });
@@ -107,7 +106,10 @@ export default function CustomerDashboard() {
   const { user: firebaseUser, isUserLoading } = useUser();
   const { toast } = useToast();
 
-  // 1. Sync Firebase User to Store if missing after refresh
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   useEffect(() => {
     if (firebaseUser && !user) {
       setUser({
@@ -119,17 +121,10 @@ export default function CustomerDashboard() {
     }
   }, [firebaseUser, user, setUser]);
 
-  // Check if user profile exists
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    // If we're on the dashboard and profile doesn't exist, force onboarding
-    // Only check once hydration is complete and auth state is determined
     if (isClient && !isUserLoading && !isProfileLoading && !profile && firebaseUser && currentView === 'home') {
       setCurrentView('onboarding-map');
       handleAutoLocate();
@@ -146,13 +141,11 @@ export default function CustomerDashboard() {
             lng: position.coords.longitude
           });
           setLocating(false);
-          toast({ title: "Location detected", description: "Your pin has been placed on the map." });
         },
         (error) => {
           console.error(error);
           setLocating(false);
           setGpsLocation({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
-          toast({ variant: "destructive", title: "Location error", description: "Could not detect GPS. Using default area pin." });
         }
       );
     } else {
@@ -163,12 +156,8 @@ export default function CustomerDashboard() {
 
   const handleOnboardingComplete = () => {
     if (!firebaseUser?.uid) return;
-    if (!onboardingForm.phone.trim()) {
-      toast({ variant: "destructive", title: "Missing Phone", description: "Please provide your mobile number." });
-      return;
-    }
-    if (!onboardingForm.address.trim()) {
-      toast({ variant: "destructive", title: "Missing Address", description: "Please provide your street address." });
+    if (!onboardingForm.phone.trim() || !onboardingForm.address.trim()) {
+      toast({ variant: "destructive", title: "Missing Info", description: "Phone and Address are required." });
       return;
     }
 
@@ -237,7 +226,7 @@ export default function CustomerDashboard() {
       total: cartTotal + 2,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: onboardingForm.address || profile?.address || 'Your saved address',
+      address: profile?.address || onboardingForm.address || 'Your saved address',
     };
     placeOrder(newOrder);
     setSelectedOrderId(newOrder.id);
@@ -249,16 +238,8 @@ export default function CustomerDashboard() {
       await auth.signOut();
       setUser(null);
       router.push('/');
-      toast({
-        title: "Signed out",
-        description: "You have been successfully logged out."
-      });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Logout failed",
-        description: error.message
-      });
+      toast({ variant: "destructive", title: "Logout failed", description: error.message });
     }
   };
 
@@ -276,7 +257,6 @@ export default function CustomerDashboard() {
 
   if (!isClient) return null;
 
-  // Global Loading State (Hydration + Auth + Profile)
   if (isUserLoading || (firebaseUser && isProfileLoading)) {
     return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4 bg-background">
@@ -286,7 +266,6 @@ export default function CustomerDashboard() {
     );
   }
 
-  // Redirect to login if not authenticated
   if (!firebaseUser && !isUserLoading) {
     router.replace('/auth/customer');
     return null;
@@ -294,14 +273,13 @@ export default function CustomerDashboard() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-20">
-      {/* Onboarding: Map Step */}
+      {/* Onboarding View */}
       {currentView === 'onboarding-map' && (
         <div className="flex flex-col h-screen bg-white">
           <div className="p-6 space-y-2">
             <h1 className="text-3xl font-black text-slate-900">Pin Your House</h1>
             <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
           </div>
-          
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
             <iframe
               width="100%"
@@ -320,7 +298,6 @@ export default function CustomerDashboard() {
                 </div>
               </div>
             </div>
-
             <Button 
               variant="outline" 
               className="absolute bottom-6 right-6 rounded-full h-14 w-14 bg-white shadow-2xl p-0"
@@ -329,18 +306,16 @@ export default function CustomerDashboard() {
             >
               {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <MapPin className="h-6 w-6 text-primary" />}
             </Button>
-            
-            {(profile || currentView === 'onboarding-map') && (
+            {profile && (
               <Button 
                 variant="ghost" 
                 className="absolute top-6 left-6 rounded-full h-10 w-10 bg-white/80 backdrop-blur-sm shadow-md p-0"
-                onClick={() => profile ? setCurrentView('home') : router.push('/')}
+                onClick={() => setCurrentView('home')}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
           </div>
-
           <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
             <Button 
               className="w-full h-14 text-lg font-black rounded-2xl bg-slate-900 hover:bg-slate-800"
@@ -353,7 +328,6 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Onboarding: Details Step */}
       {currentView === 'onboarding-details' && (
         <div className="flex flex-col h-screen bg-white p-6 space-y-8 overflow-y-auto">
           <div className="space-y-2">
@@ -363,7 +337,6 @@ export default function CustomerDashboard() {
             <h1 className="text-3xl font-black text-slate-900">Delivery Info</h1>
             <p className="text-slate-500 font-medium">Finalize your profile details.</p>
           </div>
-
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-slate-400">Street Address</label>
@@ -377,7 +350,6 @@ export default function CustomerDashboard() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
               <div className="relative">
@@ -390,7 +362,6 @@ export default function CustomerDashboard() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-slate-400">Nearby Spots (Landmarks)</label>
               <div className="relative">
@@ -404,9 +375,7 @@ export default function CustomerDashboard() {
               </div>
             </div>
           </div>
-
           <div className="flex-1" />
-
           <Button 
             className="w-full h-14 text-lg font-black rounded-2xl bg-green-600 hover:bg-green-700 shadow-xl"
             onClick={handleOnboardingComplete}
@@ -421,550 +390,220 @@ export default function CustomerDashboard() {
       {['home', 'categories', 'favorites', 'cart', 'order-success', 'orders'].includes(currentView) && profile && (
         <>
           {/* Header */}
-          {(currentView === 'home' || currentView === 'categories') && (
-            <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 overflow-hidden flex-1">
-                  {currentView !== 'home' && (
-                    <button 
-                      onClick={() => setCurrentView('home')} 
-                      className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
-                    >
-                      <ArrowLeft className="h-6 w-6 text-slate-900" />
-                    </button>
-                  )}
-                  
-                  <div 
-                    className="flex flex-col cursor-pointer min-w-0" 
-                    onClick={() => setCurrentView('onboarding-map')}
+          <header className="bg-white px-4 py-3 sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 overflow-hidden flex-1">
+                {currentView !== 'home' && (
+                  <button 
+                    onClick={() => setCurrentView('home')} 
+                    className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0"
                   >
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
-                      <ChevronDown className="h-3 w-3 text-slate-400" />
-                    </div>
-                    <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
-                      {profile?.address || 'Set delivery location'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
-                        <UserIcon className="h-5 w-5 text-slate-700" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl w-48">
-                      <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        {firebaseUser?.displayName || user?.name || 'My Profile'}
-                      </div>
-                      <Separator className="my-1" />
-                      <DropdownMenuItem onClick={() => setCurrentView('onboarding-map')} className="font-bold cursor-pointer">
-                        <MapPin className="h-4 w-4 mr-2" /> Edit Location
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer">
-                        <Package className="h-4 w-4 mr-2" /> My Orders
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer focus:text-destructive focus:bg-destructive/10">
-                        <LogOut className="h-4 w-4 mr-2" /> Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                  <button onClick={() => setCurrentView('cart')} className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-full transition-colors">
-                     <ShoppingCart className="h-6 w-6" />
-                     {cart.length > 0 && (
-                        <span className="absolute top-1 right-1 bg-primary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
-                          {cart.length}
-                        </span>
-                     )}
+                    <ArrowLeft className="h-6 w-6 text-slate-900" />
                   </button>
+                )}
+                <div className="flex flex-col cursor-pointer min-w-0" onClick={handleEditLocation}>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
+                    <ChevronDown className="h-3 w-3 text-slate-400" />
+                  </div>
+                  <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
+                    {profile.address}
+                  </span>
                 </div>
               </div>
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input 
-                  placeholder='Search groceries...' 
-                  className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              <div className="flex items-center gap-1 shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full bg-slate-100 h-9 w-9">
+                      <UserIcon className="h-5 w-5 text-slate-700" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl w-48">
+                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">{firebaseUser?.displayName || 'My Profile'}</div>
+                    <Separator className="my-1" />
+                    <DropdownMenuItem onClick={handleEditLocation} className="font-bold cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Location</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrentView('orders')} className="font-bold cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <button onClick={() => setCurrentView('cart')} className="relative p-2 text-slate-700 hover:bg-slate-100 rounded-full">
+                  <ShoppingCart className="h-6 w-6" />
+                  {cart.length > 0 && <span className="absolute top-1 right-1 bg-primary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{cart.length}</span>}
+                </button>
               </div>
-            </header>
-          )}
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input 
+                placeholder='Search groceries...' 
+                className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </header>
 
-          {/* Home View */}
+          {/* Views */}
           {currentView === 'home' && (
             <main className="flex-1 overflow-x-hidden">
               <div className="flex items-center gap-6 overflow-x-auto px-4 py-6 no-scrollbar bg-white border-b border-slate-50">
                 {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.name}
-                    onClick={() => {
-                      setActiveCategory(cat.name);
-                    }}
-                    className="flex flex-col items-center gap-2 min-w-[60px]"
-                  >
-                    <div className={cn(
-                      "p-3 rounded-xl transition-all",
-                      activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-600"
-                    )}>
+                  <button key={cat.name} onClick={() => setActiveCategory(cat.name)} className="flex flex-col items-center gap-2 min-w-[60px]">
+                    <div className={cn("p-3 rounded-xl transition-all", activeCategory === cat.name ? "bg-primary text-white" : "bg-slate-50 text-slate-600")}>
                       <cat.icon className="h-6 w-6" />
                     </div>
-                    <span className={cn(
-                      "text-[10px] font-bold",
-                      activeCategory === cat.name ? "text-primary" : "text-slate-500"
-                    )}>{cat.name}</span>
+                    <span className={cn("text-[10px] font-bold", activeCategory === cat.name ? "text-primary" : "text-slate-500")}>{cat.name}</span>
                   </button>
                 ))}
               </div>
-
               <div className="px-4 py-4 space-y-8">
                 {activeCategory === 'All' ? (
                   Object.entries(groupedProducts).map(([category, items]) => (
                     <section key={category} className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h2 className="text-xl font-black text-slate-900">{category}</h2>
-                        <button 
-                          onClick={() => setActiveCategory(category)}
-                          className="text-primary text-sm font-bold hover:underline"
-                        >
-                          View all
-                        </button>
+                        <button onClick={() => setActiveCategory(category)} className="text-primary text-sm font-bold">View all</button>
                       </div>
                       <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                        {items.map(product => (
-                          <ProductCard key={product.id} product={product} layout="horizontal" />
-                        ))}
+                        {items.map(product => <ProductCard key={product.id} product={product} layout="horizontal" />)}
                       </div>
                     </section>
                   ))
                 ) : (
                   <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-black text-slate-900">{activeCategory}</h2>
-                      <button 
-                        onClick={() => setActiveCategory('All')}
-                        className="text-primary text-sm font-bold hover:underline"
-                      >
-                        Clear filters
-                      </button>
-                    </div>
+                    <h2 className="text-xl font-black text-slate-900">{activeCategory}</h2>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                      {filteredProducts.map(product => (
-                        <ProductCard key={product.id} product={product} layout="grid" />
-                      ))}
+                      {filteredProducts.map(product => <ProductCard key={product.id} product={product} layout="grid" />)}
                     </div>
-                    {filteredProducts.length === 0 && (
-                      <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-                        <ShoppingBag className="h-16 w-16 mb-4 opacity-10" />
-                        <p className="font-bold">No products found in this category</p>
-                      </div>
-                    )}
                   </section>
                 )}
               </div>
             </main>
           )}
 
-          {/* Categories View */}
-          {currentView === 'categories' && (
-            <div className="flex-1 flex overflow-hidden">
-              <aside className="w-24 bg-slate-50 border-r flex flex-col overflow-y-auto no-scrollbar">
-                {CATEGORIES.map((cat) => {
-                  const isActive = activeCategory === cat.name;
-                  return (
-                    <button
-                      key={cat.name}
-                      onClick={() => setActiveCategory(cat.name)}
-                      className={cn(
-                        "relative flex flex-col items-center py-4 px-2 text-center transition-all",
-                        isActive ? "bg-white" : "bg-transparent"
-                      )}
+          {currentView === 'orders' && (
+            <main className="flex-1 p-4 space-y-4 bg-slate-50">
+              <h2 className="text-2xl font-black text-slate-900 px-2">My Orders</h2>
+              {orders.length === 0 ? (
+                <div className="py-20 text-center text-slate-400 font-bold">No orders yet</div>
+              ) : (
+                <div className="space-y-4">
+                  {orders.map(o => (
+                    <button 
+                      key={o.id} 
+                      onClick={() => { setSelectedOrderId(o.id); setCurrentView('order-success'); }}
+                      className="w-full bg-white p-4 rounded-3xl flex items-center justify-between border border-slate-100 shadow-sm"
                     >
-                      {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r-full" />}
-                      <div className={cn(
-                        "w-12 h-12 rounded-full overflow-hidden mb-1 flex items-center justify-center bg-white border-2",
-                        isActive ? "border-green-600" : "border-slate-100"
-                      )}>
-                        <cat.icon className={cn("h-6 w-6", isActive ? "text-green-600" : "text-slate-400")} />
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-slate-50 rounded-2xl flex items-center justify-center">
+                          <Package className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black text-slate-900">ORD-{o.id}</p>
+                          <p className="text-[10px] text-slate-500 font-bold">{new Date(o.createdAt).toLocaleDateString()} • ₹{o.total.toFixed(2)}</p>
+                        </div>
                       </div>
-                      <span className={cn(
-                        "text-[10px] font-bold leading-tight",
-                        isActive ? "text-slate-900" : "text-slate-500"
-                      )}>
-                        {cat.name}
-                      </span>
+                      <Badge variant="outline" className="text-[10px] font-black uppercase tracking-tighter">
+                        {STATUS_LABELS[o.status] || o.status}
+                      </Badge>
                     </button>
-                  )
-                })}
-              </aside>
-              <main className="flex-1 overflow-y-auto bg-white p-4 no-scrollbar">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                  {filteredProducts.map(product => (
-                    <ProductCard key={product.id} product={product} layout="grid" />
                   ))}
                 </div>
-              </main>
-            </div>
-          )}
-
-          {/* Favorites View */}
-          {currentView === 'favorites' && (
-            <>
-              <header className="bg-white px-4 py-6 border-b flex items-center gap-4">
-                <button onClick={() => setCurrentView('home')}>
-                  <ArrowLeft className="h-6 w-6 text-slate-900" />
-                </button>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900">Favorites</h2>
-                  <p className="text-xs text-slate-500 font-bold">Your handpicked groceries</p>
-                </div>
-              </header>
-              <main className="flex-1 p-4 overflow-y-auto no-scrollbar">
-                {favoritesProducts.length === 0 ? (
-                  <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
-                    <Heart className="h-16 w-16 mb-4 opacity-10" />
-                    <p className="font-bold">No favorites yet</p>
-                    <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    {favoritesProducts.map(product => (
-                      <ProductCard key={product.id} product={product} layout="grid" />
-                    ))}
-                  </div>
-                )}
-              </main>
-            </>
-          )}
-
-          {/* Cart View */}
-          {currentView === 'cart' && (
-            <div className="flex flex-col h-screen overflow-hidden">
-              <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0">
-                <button onClick={() => setCurrentView('home')}>
-                  <ArrowLeft className="h-6 w-6 text-slate-900" />
-                </button>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
-                  <p className="text-xs text-slate-500 font-bold">{cart.length} items</p>
-                </div>
-              </header>
-
-              <main className="flex-1 overflow-y-auto p-4 no-scrollbar bg-slate-50">
-                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-                    <ShoppingBag className="h-20 w-20 mb-6 opacity-20" />
-                    <p className="text-lg font-black text-slate-600">Your basket is empty</p>
-                    <Button variant="outline" className="mt-6 rounded-xl font-black" onClick={() => setCurrentView('home')}>Start Shopping</Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4 pb-20">
-                    <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
-                      {cart.map((item) => (
-                        <div key={item.productId} className="flex gap-4 p-3 hover:bg-slate-50 transition-colors rounded-2xl group">
-                          <div className="h-20 w-20 relative rounded-2xl overflow-hidden bg-white border border-slate-100 p-2 flex-shrink-0">
-                            <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
-                          </div>
-                          <div className="flex-1 flex flex-col justify-between min-w-0">
-                            <div className="pr-8 relative">
-                              <h4 className="font-black text-sm text-slate-900 line-clamp-1">{item.name}</h4>
-                              <p className="text-xs font-bold text-green-600">₹{item.price.toFixed(2)}</p>
-                              <button className="absolute top-0 right-0 p-1 text-slate-300 hover:text-destructive transition-colors" onClick={() => removeFromCart(item.productId)}>
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between mt-2">
-                              <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden h-8 shadow-sm">
-                                <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
-                                  <Minus className="h-3 w-3" />
-                                </button>
-                                <span className="px-1 text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                                <button className="px-3 hover:bg-slate-50 text-slate-600" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}>
-                                  <Plus className="h-3 w-3" />
-                                </button>
-                              </div>
-                              <p className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-slate-100 rounded-xl"><MapPin className="h-5 w-5 text-slate-600" /></div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Delivery Address</p>
-                            <button onClick={handleEditLocation} className="text-[10px] font-black text-primary uppercase">Edit</button>
-                          </div>
-                          <p className="text-sm font-bold text-slate-900 mt-1">{profile.address}</p>
-                          {profile.nearby && <p className="text-xs text-slate-500 font-medium">Landmark: {profile.nearby}</p>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                      <h3 className="font-black text-lg text-slate-900">Bill Summary</h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-500 font-medium">Item Total</span>
-                          <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-500 font-medium">Delivery Fee</span>
-                          <span className="text-green-600 font-bold">FREE</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-500 font-medium">Handling Charge</span>
-                          <span className="font-bold">₹2</span>
-                        </div>
-                        <Separator className="bg-slate-100" />
-                        <div className="flex justify-between text-xl font-black">
-                          <span className="text-slate-900">Grand Total</span>
-                          <span className="text-slate-900">₹{(cartTotal + 2).toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </main>
-
-              {cart.length > 0 && (
-                <div className="bg-white border-t p-4 pb-12 flex-shrink-0 z-50 shadow-2xl">
-                  <Button 
-                    className="w-full h-14 text-lg font-black rounded-2xl shadow-lg bg-green-600 hover:bg-green-700 flex items-center justify-between px-6"
-                    onClick={() => setIsConfirmOpen(true)}
-                  >
-                    <div className="text-left">
-                      <p className="text-[10px] opacity-80 uppercase tracking-widest leading-none">Total</p>
-                      <p className="text-xl leading-none mt-1">₹{(cartTotal + 2).toFixed(2)}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span>Place Order</span>
-                      <ChevronRight className="h-5 w-5" />
-                    </div>
-                  </Button>
-                </div>
               )}
-            </div>
+            </main>
           )}
 
-          {/* Orders Tracking View */}
-          {currentView === 'orders' && (
-            <div className="flex flex-col h-screen bg-slate-50 overflow-y-auto no-scrollbar pb-24">
-              <header className="bg-white px-4 py-6 border-b flex items-center gap-4 flex-shrink-0 sticky top-0 z-10">
-                <button onClick={() => setCurrentView('home')}>
-                  <ArrowLeft className="h-6 w-6 text-slate-900" />
-                </button>
-                <h2 className="text-2xl font-black text-slate-900">My Orders</h2>
-              </header>
-
-              <main className="p-4 space-y-4">
-                {orders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                    <Package className="h-20 w-20 mb-4 opacity-10" />
-                    <p className="font-bold">No orders yet</p>
-                    <Button variant="link" onClick={() => setCurrentView('home')}>Go shopping</Button>
-                  </div>
-                ) : (
-                  <>
-                    {selectedOrder && (
-                      <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white mb-4">
-                        <CardContent className="p-6">
-                          <h3 className="text-base font-black text-slate-900 mb-6">
-                            Active Tracking: ORD-{selectedOrder.id}
-                          </h3>
-
-                          <div className="relative space-y-8 pl-12">
-                            <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-slate-100" />
-                            
-                            {/* Timeline Steps */}
-                            <div className="relative">
-                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                                ['CONFIRMED', 'PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
-                              )}>
-                                <MapPin className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-black text-slate-900">Order Placed</p>
-                                <p className="text-xs text-slate-400 font-medium">
-                                  {selectedOrder.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="relative">
-                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                                ['PREPARING', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400"
-                              )}>
-                                <Box className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-black text-slate-900">Packed in SwiftCart Warehouse</p>
-                                <p className="text-xs text-slate-400 font-medium">Items are carefully packed</p>
-                              </div>
-                            </div>
-
-                            <div className="relative">
-                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                                ['PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(selectedOrder.status) ? "bg-primary text-white" : "bg-slate-100 text-slate-400"
-                              )}>
-                                <Truck className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-black text-slate-900">Picked up by Swift Drones & Co.</p>
-                                <p className="text-xs text-slate-400 font-medium">Out for delivery</p>
-                              </div>
-                            </div>
-
-                            <div className="relative">
-                              <div className={cn("absolute -left-12 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10", 
-                                selectedOrder.status === 'DELIVERED' ? "bg-green-500 text-white" : "bg-white text-slate-300 border-slate-100"
-                              )}>
-                                <HomeIcon className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className={cn("text-sm font-black", selectedOrder.status === 'DELIVERED' ? "text-slate-900" : "text-slate-300")}>Order Delivered</p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    <div className="space-y-4 pt-4">
-                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">Order History</h3>
-                      {orders.map(o => (
-                        <button 
-                          key={o.id} 
-                          onClick={() => setSelectedOrderId(o.id)}
-                          className={cn("w-full bg-white p-4 rounded-3xl flex items-center justify-between border transition-all", 
-                            selectedOrderId === o.id ? "border-primary ring-1 ring-primary/20" : "border-slate-100"
-                          )}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 bg-slate-50 rounded-2xl flex items-center justify-center">
-                              <Package className="h-5 w-5 text-slate-400" />
-                            </div>
-                            <div className="text-left">
-                              <p className="text-sm font-black text-slate-900">ORD-{o.id}</p>
-                              <p className="text-[10px] text-slate-500 font-bold">{new Date(o.createdAt).toLocaleDateString()} • ₹{o.total.toFixed(2)}</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-tighter">
-                            {STATUS_LABELS[o.status] || o.status}
-                          </Badge>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </main>
-            </div>
-          )}
-
-          {/* Order Success */}
-          {currentView === 'order-success' && latestOrder && (
+          {/* Bottom Nav */}
+          <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
+            <button onClick={() => { setCurrentView('home'); setActiveCategory('All'); }} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
+              <HomeIcon className="h-6 w-6" />
+              <span className="text-[10px] font-bold">Home</span>
+            </button>
+            <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
+              <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
+              <span className="text-[10px] font-bold">Favorites</span>
+            </button>
+            <button onClick={() => setCurrentView('orders')} className={cn("flex flex-col items-center gap-1", currentView === 'orders' ? 'text-green-600' : 'text-slate-400')}>
+              <Package className="h-6 w-6" />
+              <span className="text-[10px] font-bold">Orders</span>
+            </button>
+            <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
+              <ShoppingCart className="h-6 w-6" />
+              <span className="text-[10px] font-bold">Cart</span>
+            </button>
+          </nav>
+          
+          {/* Order Success/Tracking View Integrated as a view if needed */}
+          {currentView === 'order-success' && selectedOrder && (
             <div className="flex flex-col h-screen bg-white">
               <main className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="h-12 w-12 text-green-600" />
                 </div>
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-black text-slate-900">Order Confirmed!</h1>
-                  <p className="text-slate-500 font-medium">Arrival at {profile.address} in 9 mins.</p>
+                  <h1 className="text-3xl font-black text-slate-900">Order Tracking</h1>
+                  <p className="text-slate-500 font-medium">Order ID: #{selectedOrder.id}</p>
                 </div>
-
-                <Card className="w-full max-sm border-none bg-slate-50 shadow-none p-6 space-y-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Order ID</span>
-                    <span className="font-black text-slate-900">#{latestOrder.id}</span>
-                  </div>
+                <Card className="w-full bg-slate-50 border-none p-6 space-y-4 shadow-none">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Current Status</span>
-                    <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      {STATUS_LABELS[latestOrder.status] || latestOrder.status.replace(/_/g, ' ')}
+                    <span className="text-xs font-black uppercase text-slate-400">Status</span>
+                    <Badge className="bg-amber-100 text-amber-700 border-none font-black">{STATUS_LABELS[selectedOrder.status]}</Badge>
+                  </div>
+                  <div className="text-left space-y-4">
+                    <p className="text-sm font-bold text-slate-900">Delivery Address: {selectedOrder.address}</p>
+                    <Separator />
+                    <div className="flex items-center gap-2 text-xs font-black text-primary">
+                      <Truck className="h-4 w-4" /> Arriving in approx. 12 mins
                     </div>
                   </div>
                 </Card>
-
-                <div className="w-full space-y-3 pt-6">
-                  <Button 
-                    className="w-full h-14 rounded-2xl font-black bg-primary"
-                    onClick={() => setCurrentView('orders')}
-                  >
-                    Track My Order <ChevronRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full h-12 rounded-xl font-black text-slate-400"
-                    onClick={() => setCurrentView('home')}
-                  >
-                    Back to Shopping
-                  </Button>
-                </div>
+                <Button className="w-full h-14 rounded-2xl font-black" onClick={() => setCurrentView('home')}>Continue Shopping</Button>
               </main>
             </div>
           )}
-
-          {/* Bottom Navigation */}
-          {['home', 'favorites', 'categories', 'cart', 'orders'].includes(currentView) && (
-            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shadow-2xl z-50">
-              <button onClick={() => setCurrentView('home')} className={cn("flex flex-col items-center gap-1", currentView === 'home' ? 'text-green-600' : 'text-slate-400')}>
-                <HomeIcon className="h-6 w-6" />
-                <span className="text-[10px] font-bold">Home</span>
-              </button>
-              <button onClick={() => setCurrentView('favorites')} className={cn("flex flex-col items-center gap-1", currentView === 'favorites' ? 'text-green-600' : 'text-slate-400')}>
-                <Heart className={cn("h-6 w-6", currentView === 'favorites' && 'fill-green-600')} />
-                <span className="text-[10px] font-bold">Favorites</span>
-              </button>
-              <button onClick={() => setCurrentView('categories')} className={cn("flex flex-col items-center gap-1", currentView === 'categories' ? 'text-green-600' : 'text-slate-400')}>
-                <LayoutGrid className="h-6 w-6" />
-                <span className="text-[10px] font-bold">Categories</span>
-              </button>
-              <button onClick={() => setCurrentView('orders')} className={cn("flex flex-col items-center gap-1", currentView === 'orders' ? 'text-green-600' : 'text-slate-400')}>
-                <div className="relative">
-                  <Package className="h-6 w-6" />
-                  {orders.some(o => o.status !== 'DELIVERED') && (
-                    <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-3 w-3 rounded-full flex items-center justify-center border border-white">
-                      !
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-bold">Orders</span>
-              </button>
-              <button onClick={() => setCurrentView('cart')} className={cn("flex flex-col items-center gap-1 relative", currentView === 'cart' ? 'text-green-600' : 'text-slate-400')}>
-                <div className="relative">
-                  <ShoppingCart className="h-6 w-6" />
-                  {cart.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-white">
-                      {cart.reduce((s, i) => s + i.quantity, 0)}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-bold">Cart</span>
-              </button>
-            </nav>
+          
+          {/* Favorites & Cart Views (Simplified templates as per logic above) */}
+          {currentView === 'cart' && (
+             <main className="flex-1 p-4 bg-slate-50 space-y-4">
+               <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
+               {cart.length === 0 ? <div className="py-20 text-center font-bold text-slate-400">Your basket is empty</div> : (
+                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+                    {cart.map(item => (
+                      <div key={item.productId} className="flex justify-between items-center">
+                        <span className="font-bold">{item.name} x{item.quantity}</span>
+                        <span className="font-black text-primary">₹{(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <Separator />
+                    <div className="flex justify-between items-center text-xl font-black">
+                      <span>Total</span>
+                      <span>₹{(cartTotal + 2).toFixed(2)}</span>
+                    </div>
+                    <Button className="w-full h-14 rounded-2xl bg-green-600 font-black" onClick={() => setIsConfirmOpen(true)}>Place Order</Button>
+                 </div>
+               )}
+             </main>
           )}
 
-          {/* Confirmation Dialog */}
+          {currentView === 'favorites' && (
+             <main className="flex-1 p-4 bg-slate-50 space-y-4">
+               <h2 className="text-2xl font-black text-slate-900">Favorites</h2>
+               <div className="grid grid-cols-2 gap-4">
+                 {favoritesProducts.map(product => <ProductCard key={product.id} product={product} layout="grid" />)}
+                 {favoritesProducts.length === 0 && <div className="col-span-2 py-20 text-center font-bold text-slate-400">No favorites yet</div>}
+               </div>
+             </main>
+          )}
+
           <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
             <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-black text-slate-900">Confirm Your Order?</AlertDialogTitle>
-                <AlertDialogDescription className="font-medium text-slate-500">
-                  Are you sure you want to place this order? You will pay ₹{(cartTotal + 2).toFixed(2)} upon arrival at {onboardingForm.address || profile.address}.
-                </AlertDialogDescription>
+                <AlertDialogTitle className="font-black">Confirm Order?</AlertDialogTitle>
+                <AlertDialogDescription>Pay ₹{(cartTotal + 2).toFixed(2)} at delivery.</AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter className="flex-row gap-2 mt-4">
-                <AlertDialogCancel className="flex-1 rounded-xl font-bold mt-0">No, Wait</AlertDialogCancel>
-                <AlertDialogAction className="flex-1 rounded-xl font-bold bg-green-600 hover:bg-green-700" onClick={handlePlaceOrder}>Yes, Place Order</AlertDialogAction>
+              <AlertDialogFooter className="flex-row gap-2">
+                <AlertDialogCancel className="flex-1 rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction className="flex-1 rounded-xl bg-green-600" onClick={handlePlaceOrder}>Confirm</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -980,10 +619,7 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
   const isFavorite = favorites.includes(product.id);
 
   return (
-    <div className={cn(
-      "flex flex-col transition-all group",
-      layout === 'horizontal' ? 'min-w-[140px] max-w-[140px]' : 'w-full'
-    )}>
+    <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[140px] max-w-[140px]' : 'w-full')}>
       <div className="relative aspect-square bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-3 mb-3 border border-slate-100">
         <img src={product.imageUrl} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
         <button onClick={() => toggleFavorite(product.id)} className={cn("absolute top-2 right-2 transition-colors", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}>
@@ -999,21 +635,13 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
           </div>
         )}
       </div>
-
       <div className="flex flex-col px-1 gap-1">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 border border-green-600 flex items-center justify-center rounded-[2px]"><div className="w-1.5 h-1.5 bg-green-600 rounded-full" /></div>
-          <span className="text-[10px] text-slate-500 font-bold">500 g</span>
-        </div>
         <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight h-8">{product.name}</h4>
         <div className="flex items-center gap-1">
           <div className="flex items-center">{[1, 2, 3, 4, 5].map((s) => (<Star key={s} className={cn("h-2.5 w-2.5", s <= 4 ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200")} />))}</div>
-          <span className="text-[8px] text-slate-400 font-bold">(2,340)</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><Clock className="h-3 w-3 text-green-600" /> 12 MINS</div>
         <div className="flex items-baseline gap-1 mt-1">
           <span className="text-sm font-black text-slate-900">₹{product.price}</span>
-          <span className="text-[10px] text-slate-400 line-through">₹{Math.round(product.price * 1.2)}</span>
           <span className="text-[10px] font-black text-green-600 ml-auto">22% OFF</span>
         </div>
       </div>
