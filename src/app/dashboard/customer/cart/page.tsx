@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ShoppingBag, Plus, Minus, ArrowLeft, MapPin, CreditCard, User } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
@@ -20,7 +19,6 @@ export default function CustomerCart() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [paymentType, setPaymentType] = useState('cod');
   const router = useRouter();
   const db = useFirestore();
   const { user: firebaseUser } = useUser();
@@ -52,7 +50,7 @@ export default function CustomerCart() {
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
       address: deliveryAddress || 'Delivery to your current location',
-      paymentMethod: paymentType === 'cod' ? 'Cash on Delivery' : 'Online Payment',
+      paymentMethod: 'Scan and pay at the time of delivery',
     };
 
     setDocumentNonBlocking(doc(db, 'orders', orderId), newOrder, { merge: true });
@@ -164,30 +162,10 @@ export default function CustomerCart() {
               <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Payment Type</h3>
             </div>
             
-            <p className="text-xs font-bold text-accent bg-accent/5 p-3 rounded-xl border border-accent/20">
+            <p className="text-sm font-bold text-accent bg-accent/5 p-4 rounded-xl border border-accent/20 flex items-center gap-3">
+              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               Scan and pay at the time of delivery
             </p>
-
-            <RadioGroup value={paymentType} onValueChange={setPaymentType} className="grid grid-cols-2 gap-4">
-              <div>
-                <RadioGroupItem value="cod" id="cod" className="peer sr-only" />
-                <Label
-                  htmlFor="cod"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all h-full"
-                >
-                  <span className="text-sm font-bold">Cash on Delivery</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="online" id="online" className="peer sr-only" />
-                <Label
-                  htmlFor="online"
-                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all h-full"
-                >
-                  <span className="text-sm font-bold">Online Payment</span>
-                </Label>
-              </div>
-            </RadioGroup>
           </div>
           
           {/* Summary and Action */}
