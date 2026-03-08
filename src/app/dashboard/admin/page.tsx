@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Package, DollarSign, ClipboardList, Truck, TrendingUp, Clock, User, Phone, MapPin } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Package, DollarSign, ClipboardList, Truck, Clock, User, Phone, MapPin } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,12 @@ export default function AdminOverview() {
   const activeOrdersCount = remoteOrders?.filter(o => o.status !== 'DELIVERED').length || 0;
   const totalRevenue = remoteOrders?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
   const availableAgents = agents?.filter(a => a.status === 'Available').length || 0;
+
+  // Sorting recent activity by date: Newest first
+  const sortedRecentOrders = useMemo(() => {
+    if (!remoteOrders) return [];
+    return [...remoteOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [remoteOrders]);
 
   const handleAssignAgent = (orderId: string, agentId: string) => {
     updateDocumentNonBlocking(doc(db, 'orders', orderId), {
@@ -57,41 +63,39 @@ export default function AdminOverview() {
         <StatCard title="Fleet Status" value={`${availableAgents} Online`} icon={Truck} color="text-blue-500" />
       </div>
 
-      <div className="max-w-3xl">
-        <Card className="border-none bg-slate-50/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" /> Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {remoteOrders?.slice(0, 5).map(order => (
-              <div 
-                key={order.id} 
-                className="group relative flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-primary/20 transition-all cursor-pointer shadow-sm"
-                onClick={() => setSelectedOrder(order)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-white shrink-0">
-                    <Package className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold truncate">ORD-{order.id}</p>
-                    <p className="text-[11px] text-muted-foreground truncate font-medium">
-                      ₹{order.total?.toFixed(2)} • {order.address}
-                    </p>
-                  </div>
+      <div className="max-w-3xl space-y-4">
+        <div className="flex items-center gap-2 px-2">
+          <Clock className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-bold text-slate-900">Recent Activity</h3>
+        </div>
+        
+        <div className="space-y-3">
+          {sortedRecentOrders.slice(0, 10).map(order => (
+            <div 
+              key={order.id} 
+              className="group relative flex items-center justify-between p-4 rounded-[2rem] bg-white border border-slate-100 hover:border-primary/20 transition-all cursor-pointer shadow-sm"
+              onClick={() => setSelectedOrder(order)}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50/50 shrink-0">
+                  <Package className="h-4 w-4 text-primary" />
                 </div>
-                <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[9px] font-bold uppercase py-0.5 px-2 rounded-full h-fit">
-                  {order.status.replace('_', ' ')}
-                </Badge>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate">ORD-{order.id}</p>
+                  <p className="text-[11px] text-muted-foreground truncate font-medium">
+                    ₹{order.total?.toFixed(2)} • {order.address}
+                  </p>
+                </div>
               </div>
-            ))}
-            {(!remoteOrders || remoteOrders.length === 0) && (
-              <div className="py-10 text-center text-xs text-muted-foreground italic">No recent activity.</div>
-            )}
-          </CardContent>
-        </Card>
+              <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase py-1 px-3 rounded-full h-fit">
+                {order.status.replace('_', ' ')}
+              </Badge>
+            </div>
+          ))}
+          {(!remoteOrders || remoteOrders.length === 0) && (
+            <div className="py-10 text-center text-xs text-muted-foreground italic">No recent activity.</div>
+          )}
+        </div>
       </div>
 
       <OrderDetailsDialog 
@@ -107,9 +111,9 @@ export default function AdminOverview() {
 
 function StatCard({ title, value, icon: Icon, color }: { title: string, value: string, icon: any, color?: string }) {
   return (
-    <Card className="border-none shadow-sm bg-white">
+    <Card className="border-none shadow-sm bg-white rounded-3xl">
       <CardContent className="p-4 flex items-center gap-4">
-        <div className={`p-2.5 rounded-xl bg-slate-50 ${color || 'text-primary'}`}>
+        <div className={`p-2.5 rounded-2xl bg-slate-50 ${color || 'text-primary'}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div>
