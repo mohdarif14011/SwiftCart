@@ -42,7 +42,7 @@ export default function AdminOrders() {
       assignedAt: new Date().toISOString()
     });
 
-    toast({ title: "Agent Assigned", description: `Order ${orderId} has been dispatched.` });
+    toast({ title: "Agent Assigned", description: `Order ${orderId} has been successfully assigned.` });
   };
 
   return (
@@ -188,7 +188,7 @@ function OrderDetailsDialog({ order, isOpen, onClose, agents, onAssign }: { orde
             </div>
           ) : order.status !== 'DELIVERED' && (
             <div className="pt-2 space-y-3">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary ml-1">Dispatch Fleet</h4>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary ml-1">Assign Agent</h4>
               <div className="grid gap-2 max-h-[160px] overflow-y-auto no-scrollbar">
                 {agents.filter(a => a.status === 'Available').map(agent => (
                   <div key={agent.id} className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-2xl hover:border-primary/20 transition-all group shadow-sm">
@@ -201,7 +201,7 @@ function OrderDetailsDialog({ order, isOpen, onClose, agents, onAssign }: { orde
                         <p className="text-[9px] text-muted-foreground uppercase font-bold">{agent.vehicleType || 'E-Bike'}</p>
                       </div>
                     </div>
-                    <Button size="sm" onClick={() => { onAssign(order.id, agent.id); onClose(); }} className="h-8 px-4 text-[10px] font-bold rounded-xl shadow-none">Dispatch</Button>
+                    <Button size="sm" onClick={() => { onAssign(order.id, agent.id); onClose(); }} className="h-8 px-6 text-[10px] font-bold rounded-xl shadow-none">Assign</Button>
                   </div>
                 ))}
                 {agents.filter(a => a.status === 'Available').length === 0 && (
