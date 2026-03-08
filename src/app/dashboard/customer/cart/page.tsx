@@ -1,22 +1,36 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingBag, Trash2, Plus, Minus, CheckCircle2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ShoppingBag, Trash2, Plus, Minus, CheckCircle2, ArrowLeft, MapPin, CreditCard } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 export default function CustomerCart() {
   const { cart, updateCartQuantity, removeFromCart, placeOrder } = useAppStore();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [paymentType, setPaymentType] = useState('cod');
   const router = useRouter();
   const db = useFirestore();
   const { user: firebaseUser } = useUser();
+
+  const userProfileRef = useMemoFirebase(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
+  const { data: profile } = useDoc(userProfileRef);
+
+  useEffect(() => {
+    if (profile?.address && !deliveryAddress) {
+      setDeliveryAddress(profile.address);
+    }
+  }, [profile, deliveryAddress]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = cart.length > 0 ? 2.00 : 0;
@@ -31,7 +45,8 @@ export default function CustomerCart() {
       total: cartTotal + deliveryFee,
       status: 'CONFIRMED' as const,
       createdAt: new Date().toISOString(),
-      address: 'Delivery to your current location',
+      address: deliveryAddress || 'Delivery to your current location',
+      paymentMethod: paymentType === 'cod' ? 'Cash on Delivery' : 'Online Payment',
     };
 
     setDocumentNonBlocking(doc(db, 'orders', orderId), newOrder, { merge: true });
@@ -40,8 +55,18 @@ export default function CustomerCart() {
   };
 
   return (
-    <div className="p-4 bg-slate-50 space-y-6">
-      <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
+    <div className="p-4 bg-slate-50 min-h-screen space-y-6 pb-24">
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => router.back()} 
+          className="rounded-full bg-white shadow-sm hover:bg-slate-100 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-900" />
+        </Button>
+        <h2 className="text-2xl font-black text-slate-900">My Basket</h2>
+      </div>
       
       {cart.length === 0 ? (
         <div className="py-20 flex flex-col items-center gap-4 text-center">
@@ -55,31 +80,82 @@ export default function CustomerCart() {
           <Button onClick={() => router.push('/dashboard/customer')} className="rounded-xl font-bold">Start Shopping</Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Cart Items */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-            {cart.map((item) => (
-              <div key={item.productId} className="flex gap-4 items-center">
-                <div className="h-16 w-16 rounded-xl bg-slate-50 flex-shrink-0 border p-2">
-                  <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+            <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Order Items</h3>
+            <div className="space-y-4">
+              {cart.map((item) => (
+                <div key={item.productId} className="flex gap-4 items-center">
+                  <div className="h-16 w-16 rounded-xl bg-slate-50 flex-shrink-0 border p-2">
+                    <img src={item.imageUrl} alt={item.name} className="object-contain w-full h-full" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900 truncate">{item.name}</p>
+                    <p className="text-xs text-slate-500 font-bold">${item.price.toFixed(2)} / unit</p>
+                  </div>
+                  <div className="flex items-center bg-slate-100 rounded-lg overflow-hidden shrink-0">
+                    <button onClick={() => updateCartQuantity(item.productId, item.quantity - 1)} className="p-1 hover:bg-slate-200 transition-colors">
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="px-3 text-sm font-black">{item.quantity}</span>
+                    <button onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} className="p-1 hover:bg-slate-200 transition-colors">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900 truncate">{item.name}</p>
-                  <p className="text-xs text-slate-500 font-bold">${item.price.toFixed(2)} / unit</p>
-                </div>
-                <div className="flex items-center bg-slate-100 rounded-lg overflow-hidden shrink-0">
-                  <button onClick={() => updateCartQuantity(item.productId, item.quantity - 1)} className="p-1 hover:bg-slate-200 transition-colors">
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="px-3 text-sm font-black">{item.quantity}</span>
-                  <button onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} className="p-1 hover:bg-slate-200 transition-colors">
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Delivery Address */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Delivery Address</h3>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-[10px] font-black uppercase text-slate-400">Street / Apartment / House</Label>
+              <Input 
+                id="address"
+                value={deliveryAddress} 
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder="Enter delivery address..."
+                className="bg-slate-50 border-none rounded-xl h-12 text-sm font-bold focus-visible:ring-primary shadow-inner"
+              />
+            </div>
+          </div>
+
+          {/* Payment Type */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Payment Type</h3>
+            </div>
+            <RadioGroup value={paymentType} onValueChange={setPaymentType} className="grid grid-cols-2 gap-4">
+              <div>
+                <RadioGroupItem value="cod" id="cod" className="peer sr-only" />
+                <Label
+                  htmlFor="cod"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                >
+                  <span className="text-sm font-bold">Cash on Delivery</span>
+                </Label>
               </div>
-            ))}
-            
-            <Separator />
-            
+              <div>
+                <RadioGroupItem value="online" id="online" className="peer sr-only" />
+                <Label
+                  htmlFor="online"
+                  className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-slate-50 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                >
+                  <span className="text-sm font-bold">Online Payment</span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {/* Summary and Action */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500 font-medium">Subtotal</span>
@@ -89,13 +165,18 @@ export default function CustomerCart() {
                 <span className="text-slate-500 font-medium">Delivery Fee</span>
                 <span className="font-bold">${deliveryFee.toFixed(2)}</span>
               </div>
+              <Separator />
               <div className="flex justify-between text-xl font-black pt-2">
                 <span>Total</span>
                 <span>${(cartTotal + deliveryFee).toFixed(2)}</span>
               </div>
             </div>
             
-            <Button className="w-full h-14 rounded-2xl bg-primary font-black shadow-lg" onClick={() => setIsConfirmOpen(true)}>
+            <Button 
+              className="w-full h-14 rounded-2xl bg-primary font-black shadow-lg text-lg" 
+              onClick={() => setIsConfirmOpen(true)}
+              disabled={!deliveryAddress.trim()}
+            >
               Place Order
             </Button>
           </div>
@@ -103,14 +184,16 @@ export default function CustomerCart() {
       )}
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-3xl border-none">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-black">Confirm Order?</AlertDialogTitle>
-            <AlertDialogDescription>Your order will be delivered in approximately 10-15 minutes.</AlertDialogDescription>
+            <AlertDialogTitle className="font-black text-xl">Confirm Order?</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium">
+              Your order will be delivered to <span className="text-slate-900 font-bold">"{deliveryAddress}"</span> in approximately 10-15 minutes.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-2">
-            <AlertDialogCancel className="flex-1 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 rounded-xl bg-primary" onClick={handlePlaceOrder}>Confirm</AlertDialogAction>
+          <AlertDialogFooter className="flex-row gap-2 mt-4">
+            <AlertDialogCancel className="flex-1 rounded-xl h-12 border-none bg-slate-100 font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 rounded-xl bg-primary h-12 font-bold" onClick={handlePlaceOrder}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
