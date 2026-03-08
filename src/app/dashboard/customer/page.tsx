@@ -5,8 +5,9 @@ import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import { 
-  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Star, Heart, Plus, Minus, Clock
+  Leaf, Apple, Milk, Croissant, Cookie, Sparkles, CookingPot, LayoutGrid, Heart, Plus, Minus, Clock
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const CATEGORIES = [
   { name: 'All', icon: LayoutGrid },
@@ -72,7 +73,7 @@ export default function CustomerShop() {
         ) : (
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-900">{activeCategory === 'All' ? 'Search Results' : activeCategory}</h2>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-12">
               {filteredProducts.map(product => <ProductCard key={product.id} product={product} layout="grid" />)}
             </div>
             {filteredProducts.length === 0 && (
@@ -92,7 +93,8 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
 
   return (
     <div className={cn("flex flex-col transition-all group", layout === 'horizontal' ? 'min-w-[150px] max-w-[150px]' : 'w-full')}>
-      <div className="relative aspect-square bg-slate-50 rounded-[2rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50">
+      {/* Image Container */}
+      <div className="relative aspect-square bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
@@ -100,30 +102,13 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
         />
         <button 
           onClick={() => toggleFavorite(product.id)} 
-          className={cn("absolute top-3 right-3 transition-colors z-10", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}
+          className={cn("absolute top-4 right-4 transition-colors z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-400 hover:text-red-400')}
         >
           <Heart className={cn("h-4 w-4", isFavorite && 'fill-current')} />
         </button>
-        {!cartItem ? (
-          <button 
-            onClick={() => addToCart(product)} 
-            className="absolute bottom-3 right-3 bg-white text-primary font-bold text-[10px] px-3 py-1.5 rounded-xl shadow-sm border border-slate-100 hover:bg-primary hover:text-white transition-all z-10"
-          >
-            ADD
-          </button>
-        ) : (
-          <div className="absolute bottom-3 right-3 bg-primary text-white flex items-center rounded-xl shadow-sm overflow-hidden z-10">
-            <button className="px-2 py-1.5 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}>
-              <Minus className="h-3 w-3" />
-            </button>
-            <span className="px-1 text-[11px] font-bold">{cartItem.quantity}</span>
-            <button className="px-2 py-1.5 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}>
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
-        )}
       </div>
       
+      {/* Product Details */}
       <div className="flex flex-col px-1 gap-1">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1 text-slate-400">
@@ -137,15 +122,48 @@ function ProductCard({ product, layout = 'grid' }: { product: any, layout: 'grid
         
         <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
         
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 mb-2">
           <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
           <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto">
+            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
               {product.offerPercentage}% off
             </span>
           )}
         </div>
+      </div>
+
+      {/* Action Area Below the Card */}
+      <div className="mt-auto">
+        {!cartItem ? (
+          <Button 
+            onClick={() => addToCart(product)} 
+            className="w-full h-10 rounded-2xl bg-white text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all font-bold text-xs"
+          >
+            ADD
+          </Button>
+        ) : (
+          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-10 shadow-sm">
+            <button 
+              className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <div className="px-2 flex flex-col items-center justify-center min-w-[40px]">
+              <span className="text-xs font-bold">{cartItem.quantity}</span>
+              <span className="text-[8px] font-medium opacity-80 leading-none">
+                {product.unit === 'kg' ? `${cartItem.quantity * (product.weight || 1)}kg` : `${cartItem.quantity * (product.weight || 1)}g`}
+              </span>
+            </div>
+            <button 
+              className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -55,7 +55,7 @@ export default function CustomerFavorites() {
            </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-10 pb-20">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-12 pb-20">
           {filteredFavorites.map(product => <ProductCard key={product.id} product={product} />)}
         </div>
       )}
@@ -70,7 +70,8 @@ function ProductCard({ product }: { product: any }) {
 
   return (
     <div className="flex flex-col w-full group">
-      <div className="relative aspect-square bg-white rounded-[2rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50 shadow-sm">
+      {/* Image Container */}
+      <div className="relative aspect-square bg-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-4 mb-3 border border-slate-100/50 shadow-sm">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
@@ -78,31 +79,13 @@ function ProductCard({ product }: { product: any }) {
         />
         <button 
           onClick={() => toggleFavorite(product.id)} 
-          className={cn("absolute top-3 right-3 transition-colors z-10", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}
+          className={cn("absolute top-3 right-3 transition-colors z-10 p-1.5 rounded-full bg-slate-50/80 backdrop-blur-sm shadow-sm", isFavorite ? 'text-red-500' : 'text-slate-300 hover:text-red-400')}
         >
           <Heart className={cn("h-5 w-5", isFavorite && 'fill-current')} />
         </button>
-        
-        {!cartItem ? (
-          <button 
-            onClick={() => addToCart(product)} 
-            className="absolute bottom-3 right-3 bg-white text-primary font-bold text-xs px-4 py-2 rounded-xl shadow-sm border border-slate-100 hover:bg-primary hover:text-white transition-all z-10"
-          >
-            ADD
-          </button>
-        ) : (
-          <div className="absolute bottom-3 right-3 bg-primary text-white flex items-center rounded-xl shadow-sm overflow-hidden z-10">
-            <button className="px-2 py-2 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}>
-              <Minus className="h-3 w-3" />
-            </button>
-            <span className="px-2 text-xs font-bold">{cartItem.quantity}</span>
-            <button className="px-2 py-2 hover:bg-primary/90 transition-colors" onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}>
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
-        )}
       </div>
 
+      {/* Product Details */}
       <div className="flex flex-col px-1 gap-1">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1 text-slate-400">
@@ -116,15 +99,48 @@ function ProductCard({ product }: { product: any }) {
         
         <h4 className="text-sm font-bold text-slate-900 truncate leading-tight">{product.name}</h4>
         
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 mb-2">
           <span className="text-sm font-bold text-slate-900">₹{product.price.toFixed(0)}</span>
           <span className="text-[10px] text-slate-300 line-through">₹{(product.price * 1.5).toFixed(0)}</span>
           {product.offerPercentage && (
-            <span className="text-[10px] font-bold text-green-600 ml-auto">
+            <span className="text-[10px] font-bold text-green-600 ml-auto bg-green-50 px-1.5 py-0.5 rounded">
               {product.offerPercentage}% off
             </span>
           )}
         </div>
+      </div>
+
+      {/* Action Area Below the Card */}
+      <div className="mt-auto">
+        {!cartItem ? (
+          <Button 
+            onClick={() => addToCart(product)} 
+            className="w-full h-10 rounded-2xl bg-white text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all font-bold text-xs"
+          >
+            ADD
+          </Button>
+        ) : (
+          <div className="flex items-center justify-between bg-primary text-white rounded-2xl overflow-hidden h-10 shadow-sm">
+            <button 
+              className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity - 1)}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <div className="px-2 flex flex-col items-center justify-center min-w-[40px]">
+              <span className="text-xs font-bold">{cartItem.quantity}</span>
+              <span className="text-[8px] font-medium opacity-80 leading-none uppercase">
+                {product.unit === 'kg' ? `${cartItem.quantity * (product.weight || 1)}kg` : `${cartItem.quantity * (product.weight || 1)}g`}
+              </span>
+            </div>
+            <button 
+              className="flex-1 flex items-center justify-center h-full hover:bg-black/10 transition-colors" 
+              onClick={() => updateCartQuantity(product.id, cartItem.quantity + 1)}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
