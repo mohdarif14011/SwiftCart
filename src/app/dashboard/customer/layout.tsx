@@ -27,7 +27,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const userProfileRef = useMemo(() => firebaseUser?.uid ? doc(db, 'customers', firebaseUser.uid) : null, [db, firebaseUser?.uid]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
-  // Unified redirection logic
   useEffect(() => {
     if (!isClient || isUserLoading || isProfileLoading) return;
 
@@ -38,11 +37,9 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
     const isOnOnboarding = pathname === '/dashboard/customer/onboarding';
 
-    // If no profile exists and user isn't on onboarding, send them there
     if (!profile && !isOnOnboarding) {
       router.replace('/dashboard/customer/onboarding');
     } 
-    // If profile exists and user IS on onboarding, send them to shop
     else if (profile && isOnOnboarding) {
       router.replace('/dashboard/customer');
     }
@@ -64,7 +61,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
 
   if (!isClient) return null;
 
-  // Show a clean loading state while checking profile/auth to prevent layout shifts
   if (isUserLoading || (isProfileLoading && pathname !== '/dashboard/customer/onboarding')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -73,7 +69,6 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Onboarding page has its own layout/header
   if (pathname === '/dashboard/customer/onboarding') {
     return <main className="min-h-screen bg-white">{children}</main>;
   }
@@ -88,10 +83,10 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3 overflow-hidden flex-1">
               <div className="flex flex-col cursor-pointer min-w-0" onClick={() => router.push('/dashboard/customer/onboarding')}>
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900">Delivering in 9 mins</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Delivering in 9 mins</span>
                   <ChevronDown className="h-3 w-3 text-slate-400" />
                 </div>
-                <span className="text-sm font-black text-slate-900 line-clamp-1 truncate">
+                <span className="text-sm font-semibold text-slate-900 line-clamp-1 truncate">
                   {profile?.address || 'Set delivery location'}
                 </span>
               </div>
@@ -104,20 +99,20 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-xl w-48">
-                  <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">{firebaseUser?.displayName || 'My Profile'}</div>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">{firebaseUser?.displayName || 'My Profile'}</div>
                   <Separator className="my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/onboarding')} className="font-bold cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Profile</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/orders')} className="font-bold cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-bold cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/onboarding')} className="font-medium cursor-pointer"><MapPin className="h-4 w-4 mr-2" /> Edit Profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/customer/orders')} className="font-medium cursor-pointer"><Package className="h-4 w-4 mr-2" /> My Orders</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive font-medium cursor-pointer"><LogOut className="h-4 w-4 mr-2" /> Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
+            <input 
               placeholder='Search groceries...' 
-              className="pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-bold focus-visible:ring-primary shadow-inner"
+              className="w-full pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
               value={searchQuery || ''}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -135,10 +130,10 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
             <div className="relative">
               <item.icon className={cn("h-6 w-6", pathname === item.href && item.name === 'Favorites' && 'fill-primary')} />
               {item.badge && item.badge > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{item.badge}</span>
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">{item.badge}</span>
               )}
             </div>
-            <span className="text-[10px] font-bold">{item.name}</span>
+            <span className="text-[10px] font-medium">{item.name}</span>
           </div>
         ))}
       </nav>

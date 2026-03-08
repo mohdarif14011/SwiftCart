@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Phone, Building2, ArrowLeft, Loader2, ChevronRight, Navigation } from 'lucide-react';
-import { useAuth, useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { MapPin, ArrowLeft, Loader2, ChevronRight, Navigation } from 'lucide-react';
+import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -72,8 +72,8 @@ export default function CustomerOnboarding() {
     <div className="flex flex-col h-screen bg-white">
       {view === 'map' ? (
         <>
-          <div className="p-6 space-y-2">
-            <h1 className="text-3xl font-black text-slate-900">Pin Your House</h1>
+          <div className="p-8 space-y-2">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pin Your House</h1>
             <p className="text-slate-500 font-medium">Place the pin exactly where you want delivery.</p>
           </div>
           <div className="flex-1 relative bg-slate-100 overflow-hidden">
@@ -86,43 +86,45 @@ export default function CustomerOnboarding() {
               className="w-full h-full grayscale opacity-70"
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-4 ring-primary/20">
-                <MapPin className="h-6 w-6 text-white" />
+              <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-2xl animate-pulse ring-8 ring-primary/10">
+                <MapPin className="h-7 w-7 text-white" />
               </div>
             </div>
-            <Button variant="outline" className="absolute bottom-6 right-6 rounded-full h-14 w-14 bg-white shadow-2xl p-0" onClick={handleAutoLocate} disabled={locating}>
-              {locating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Navigation className="h-6 w-6 text-primary" />}
+            <Button variant="outline" className="absolute bottom-8 right-8 rounded-full h-16 w-16 bg-white shadow-2xl p-0 border-none" onClick={handleAutoLocate} disabled={locating}>
+              {locating ? <Loader2 className="h-7 w-7 animate-spin" /> : <Navigation className="h-7 w-7 text-primary" />}
             </Button>
           </div>
-          <div className="p-6 bg-white border-t border-slate-100 shadow-2xl">
-            <Button className="w-full h-14 text-lg font-black rounded-2xl" onClick={() => setView('details')} disabled={!gpsLocation}>
+          <div className="p-8 bg-white border-t border-slate-50 shadow-2xl">
+            <Button className="w-full h-16 text-lg font-bold rounded-[2rem]" onClick={() => setView('details')} disabled={!gpsLocation}>
               Confirm Pin Location <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </>
       ) : (
-        <div className="flex flex-col h-screen p-6 space-y-8 overflow-y-auto">
-          <div className="space-y-2">
-            <button onClick={() => setView('map')} className="p-1 -ml-1"><ArrowLeft className="h-6 w-6 text-slate-900" /></button>
-            <h1 className="text-3xl font-black text-slate-900">Delivery Info</h1>
-            <p className="text-slate-500 font-medium">Finalize your delivery details.</p>
+        <div className="flex flex-col h-screen p-8 space-y-10 overflow-y-auto">
+          <div className="space-y-4">
+            <button onClick={() => setView('map')} className="p-2 -ml-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"><ArrowLeft className="h-6 w-6 text-slate-900" /></button>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Delivery Info</h1>
+              <p className="text-slate-500 font-medium">Finalize your delivery details.</p>
+            </div>
           </div>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Street Address</label>
-              <Input placeholder="House No, Area, City" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold" value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} />
+          <div className="space-y-8">
+            <div className="space-y-2.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Street Address</label>
+              <Input placeholder="House No, Area, City" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.address} onChange={(e) => setForm({...form, address: e.target.value})} />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
-              <Input placeholder="e.g. +91 98765 43210" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} />
+            <div className="space-y-2.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Mobile Number</label>
+              <Input placeholder="e.g. +91 98765 43210" className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-slate-400">Landmark (Optional)</label>
-              <Input placeholder="Near central park, etc." className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-bold" value={form.nearby} onChange={(e) => setForm({...form, nearby: e.target.value})} />
+            <div className="space-y-2.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Landmark (Optional)</label>
+              <Input placeholder="Near central park, etc." className="h-14 bg-slate-50 border-none rounded-2xl text-lg font-semibold px-5 focus-visible:ring-primary shadow-inner" value={form.nearby} onChange={(e) => setForm({...form, nearby: e.target.value})} />
             </div>
           </div>
           <div className="flex-1" />
-          <Button className="w-full h-14 text-lg font-black rounded-2xl bg-primary" onClick={handleComplete} disabled={saving}>
+          <Button className="w-full h-16 text-lg font-bold rounded-[2rem] bg-primary mb-2 shadow-xl shadow-primary/20" onClick={handleComplete} disabled={saving}>
             {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Start Shopping"}
           </Button>
         </div>

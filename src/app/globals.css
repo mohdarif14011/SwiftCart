@@ -24,7 +24,7 @@
     --border: 208 30% 85%;
     --input: 208 30% 85%;
     --ring: 208 82% 57%;
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   .dark {
@@ -55,9 +55,17 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-headline font-bold tracking-tight;
+    @apply font-sans font-semibold tracking-normal;
   }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
