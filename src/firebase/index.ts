@@ -8,6 +8,7 @@ import { getFirestore, Firestore } from 'firebase/firestore'
 /**
  * Initializes Firebase using the provided configuration.
  * Includes safety checks to prevent crashes if API keys are missing.
+ * Includes safety checks to prevent crashes if API keys are missing.
  */
 export function initializeFirebase() {
   try {
