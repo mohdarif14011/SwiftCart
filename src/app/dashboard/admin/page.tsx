@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useAppStore } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Package, DollarSign, ClipboardList, Truck, Clock, User, Phone, MapPin, Loader2 } from 'lucide-react';
+import { Package, DollarSign, ClipboardList, Truck, Clock, User, Phone, MapPin, Loader2, ImageIcon } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -85,8 +84,12 @@ export default function AdminOverview() {
               onClick={() => setSelectedOrder(order)}
             >
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50/50 shrink-0">
-                  <Package className="h-4 w-4 text-primary" />
+                <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50/50 shrink-0 overflow-hidden">
+                  {order.items && order.items[0]?.imageUrl ? (
+                    <img src={order.items[0].imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Package className="h-4 w-4 text-primary" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate">ORD-{order.id}</p>
@@ -140,7 +143,7 @@ function OrderDetailsDialog({ order, isOpen, onClose, agents, onAssign }: { orde
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md rounded-[2.5rem] p-8 border border-slate-100 bg-white shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-md rounded-[2.5rem] p-8 border border-slate-100 bg-white shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] no-scrollbar">
         <DialogHeader className="space-y-4">
           <div className="flex items-center justify-between">
             <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest border-primary/20 text-primary bg-slate-50 px-3 py-1">ORD-{order.id}</Badge>
@@ -155,12 +158,24 @@ function OrderDetailsDialog({ order, isOpen, onClose, agents, onAssign }: { orde
         <div className="space-y-6 py-8">
           <div className="space-y-3">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Cart Items</h4>
-            <div className="space-y-3 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
-              <div className="space-y-3 max-h-[120px] overflow-y-auto no-scrollbar">
+            <div className="space-y-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+              <div className="space-y-4 max-h-[250px] overflow-y-auto no-scrollbar">
                 {order.items?.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm font-medium">
-                    <span className="text-slate-500">{item.name} <span className="text-slate-300 ml-1">x{item.quantity}</span></span>
-                    <span className="font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 p-1 flex-shrink-0">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="w-full h-full text-slate-200 p-2" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{item.weight}{item.unit} • x{item.quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
                   </div>
                 ))}
               </div>

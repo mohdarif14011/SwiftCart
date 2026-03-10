@@ -38,7 +38,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground h-full min-h-[100dvh]">
+      <body className="font-body antialiased bg-background text-foreground h-full min-h-[100dvh] overscroll-none">
         <FirebaseClientProvider>
           {children}
           <InstallPrompt />

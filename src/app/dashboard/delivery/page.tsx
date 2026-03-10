@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -15,17 +14,22 @@ import {
   Package,
   Clock,
   DollarSign,
-  Loader2
+  Loader2,
+  ImageIcon,
+  ChevronRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
-import { OrderStatus } from '@/app/types';
+import { OrderStatus, Order } from '@/app/types';
 import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, limit } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function DeliveryDashboard() {
   const { setUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const db = useFirestore();
@@ -123,10 +127,12 @@ export default function DeliveryDashboard() {
               assignedOrders.length > 0 ? (
                 assignedOrders.map(order => (
                   <Card key={order.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-3xl overflow-hidden bg-white">
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-3 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                          <CardTitle className="text-lg font-bold">ORD-{order.id}</CardTitle>
+                          <CardTitle className="text-lg font-bold flex items-center gap-2">
+                            ORD-{order.id} <ChevronRight className="h-4 w-4 text-slate-300" />
+                          </CardTitle>
                           <CardDescription className="flex items-start gap-1.5 font-medium text-slate-400 text-xs">
                             <MapPin className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" /> {order.address}
                           </CardDescription>
@@ -138,7 +144,7 @@ export default function DeliveryDashboard() {
                     </CardHeader>
                     <CardContent className="pb-5">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                           <div className="flex -space-x-3">
                             {order.items?.slice(0, 3).map((item: any, idx: number) => (
                               <div key={idx} className="h-10 w-10 rounded-full border-4 border-white bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center">
@@ -206,7 +212,7 @@ export default function DeliveryDashboard() {
               )
             ) : (
               historyOrders.map(order => (
-                <div key={order.id} className="p-5 bg-white rounded-3xl shadow-sm flex items-center justify-between border border-slate-50">
+                <div key={order.id} className="p-5 bg-white rounded-3xl shadow-sm flex items-center justify-between border border-slate-50 cursor-pointer hover:bg-slate-50/50 transition-colors" onClick={() => setSelectedOrder(order)}>
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-green-50 rounded-2xl">
                       <CheckCircle className="h-6 w-6 text-green-500" />
@@ -218,9 +224,12 @@ export default function DeliveryDashboard() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-primary">₹{order.total?.toFixed(2)}</p>
-                    <p className="text-[9px] font-bold text-slate-300 uppercase">Settled</p>
+                  <div className="text-right flex items-center gap-3">
+                    <div>
+                      <p className="font-bold text-primary">₹{order.total?.toFixed(2)}</p>
+                      <p className="text-[9px] font-bold text-slate-300 uppercase">Settled</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-200" />
                   </div>
                 </div>
               ))
@@ -244,6 +253,78 @@ export default function DeliveryDashboard() {
           </Card>
         </div>
       </main>
+
+      <OrderDetailsDialog order={selectedOrder} isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} />
     </div>
+  );
+}
+
+function OrderDetailsDialog({ order, isOpen, onClose }: { order: Order | null, isOpen: boolean, onClose: () => void }) {
+  if (!order) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-[2.5rem] p-8 border border-slate-100 bg-white shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] no-scrollbar">
+        <DialogHeader className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest border-primary/20 text-primary bg-slate-50 px-3 py-1">ORD-{order.id}</Badge>
+            <Badge variant={order.status === 'DELIVERED' ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase px-3 py-1">{order.status.replace('_', ' ')}</Badge>
+          </div>
+          <div>
+            <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">Order Summary</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-slate-400">Items to fulfill for {order.customerName || 'Shopper'}</DialogDescription>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-6 py-8">
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Products</h4>
+            <div className="space-y-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+              <div className="space-y-4">
+                {order.items?.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 p-1 flex-shrink-0">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="w-full h-full text-slate-200 p-2" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{item.weight}{item.unit} • x{item.quantity}</p>
+                    </div>
+                    <div className="text-right min-w-[60px]">
+                      <p className="text-xs font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Separator className="bg-slate-200/50 my-1" />
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-base font-bold text-slate-900">Collect Total</span>
+                <span className="text-2xl font-bold text-primary">₹{order.total?.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Delivery Address</h4>
+            <div className="flex items-start gap-3 text-xs font-bold bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 leading-relaxed text-slate-700">
+              <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>{order.address}</span>
+            </div>
+          </div>
+
+          {order.contactNumber && (
+            <Button className="w-full h-14 rounded-2xl font-bold text-base bg-slate-900 hover:bg-slate-800 gap-3" asChild>
+              <a href={`tel:${order.contactNumber}`}>
+                <Phone className="h-5 w-5" /> Call Shopper
+              </a>
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

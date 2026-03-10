@@ -2,25 +2,46 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore'
 
 /**
  * Initializes Firebase using the provided configuration.
- * In this environment, we use the explicit config object to ensure 
- * immediate connectivity and prevent 403 errors from automatic discovery.
+ * Includes safety checks to prevent crashes if API keys are missing.
  */
 export function initializeFirebase() {
-  if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
-  }
+  try {
+    const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined" && firebaseConfig.apiKey !== "";
+    
+    if (!isConfigValid) {
+      console.warn("Firebase configuration is missing or invalid. Check your .env file.");
+      // Return a minimal shape to prevent immediate runtime crashes, though services will fail if called.
+      return {
+        firebaseApp: null as any,
+        auth: null as any,
+        firestore: null as any
+      };
+    }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+    if (!getApps().length) {
+      const firebaseApp = initializeApp(firebaseConfig);
+      return getSdks(firebaseApp);
+    }
+
+    return getSdks(getApp());
+  } catch (error) {
+    console.error("Firebase failed to initialize:", error);
+    return {
+      firebaseApp: null as any,
+      auth: null as any,
+      firestore: null as any
+    };
+  }
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  if (!firebaseApp) return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+  
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),

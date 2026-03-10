@@ -71,9 +71,9 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
   const isHomePage = pathname === '/dashboard/customer';
 
   return (
-    <div className="min-h-[100dvh] bg-white flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-white flex flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] overflow-x-hidden">
       <header className={cn(
-        "bg-white px-4 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3 transition-all shrink-0",
+        "bg-white px-4 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))] sticky top-0 z-50 shadow-sm border-b border-slate-50 flex flex-col gap-3 transition-all shrink-0",
         !isHomePage && "hidden"
       )}>
         <div className="flex items-center justify-between gap-2">
@@ -126,7 +126,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input 
             placeholder='Search groceries...' 
-            className="w-full pl-9 h-10 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="w-full pl-9 h-11 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
             value={searchQuery || ''}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -137,7 +137,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-50 h-[calc(4rem+env(safe-area-inset-bottom))]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-50 h-[calc(4.5rem+env(safe-area-inset-bottom))]">
         {navItems.map((item) => (
           <div key={item.href} onClick={() => router.push(item.href)} className={cn("flex flex-col items-center gap-0.5 cursor-pointer min-w-[60px]", pathname === item.href ? 'text-primary' : 'text-slate-400')}>
             <div className="relative">
